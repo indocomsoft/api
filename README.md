@@ -5,29 +5,16 @@
 ```
 sudo apt install python3-pip
 ```
-- setup virtualenv
+- install Poetry (https://poetry.eustace.io), prerelease version
 ```
-pip3 install virtualenv
+curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | env POETRY_PREVIEW=1 python
 ```
-- create virtualenv
+- install dependencies
 ```
-python3 -m virtualenv venv
-```
-- start virtualenv
-```
-source venv/bin/activate
-```
-- install python dependencies
-```
-pip3 install -r requirements.txt
-```
-- deactivate virtualenv
-```
-deactivate
+poetry install
 ```
 
 ## Run
-- start backend
 ```
-python3 main.py
+./launch.sh
 ```
