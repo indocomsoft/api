@@ -14,7 +14,12 @@ curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.p
 poetry install
 ```
 
-## Run
+## Run app
 ```
 ./launch.sh
 ```
+
+## Lint
+Auto-fix: `./lint_fix.sh`
+
+Check (is run in CI): `./lint.sh`
