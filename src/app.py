@@ -1,4 +1,5 @@
 import traceback
+from exceptions import AcquityException
 
 from sanic import Blueprint, Sanic
 from sanic.exceptions import SanicException
@@ -9,10 +10,13 @@ from sanic_jwt import Responses
 
 from api import blueprint, seller_login
 from config import APP_CONFIG
-from services import SellerService
+from services import InviteService, SellerService
 
 app = Sanic(load_env=False)
 app.config.update(APP_CONFIG)
+
+app.seller_service = SellerService()
+app.invite_service = InviteService()
 
 initialize_cors(app)
 
@@ -28,18 +32,29 @@ class AcquityJwtResponses(Responses):
         return json({"error": reasons}, status=exception.status_code)
 
 
+async def retrieve_seller(request, payload, *args, **kwargs):
+    if payload is not None:
+        return request.app.seller_service.get_seller(id=payload.get("id"))
+    else:
+        return None
+
+
 initialize_jwt(
-    blueprint, app=app, authenticate=seller_login, responses_class=AcquityJwtResponses
+    blueprint,
+    app=app,
+    authenticate=seller_login,
+    responses_class=AcquityJwtResponses,
+    retrieve_user=retrieve_seller,
 )
 
 app.blueprint(blueprint)
 
-app.seller_service = SellerService()
-
 
 async def error_handler(request, exception):
-    if isinstance(exception, SanicException):
+    if isinstance(exception, AcquityException):
         return json({"error": exception.message}, status=exception.status_code)
+    elif isinstance(exception, SanicException):
+        return json({"error": exception.args}, status=exception.status_code)
     traceback.print_exc()
     return json({"error": "An internal error occured."}, status=500)
 
