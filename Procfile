@@ -1,2 +1,2 @@
-release: alembic upgrade head
+release: ./run_migrations.sh
 web: ./launch.sh
