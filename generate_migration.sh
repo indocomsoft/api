@@ -5,8 +5,4 @@ if [ "$#" -ne 1 ]; then
   exit 1
 fi
 
-if [ "$NO_POETRY" = "1" ]; then
-  env PYTHONPATH=src alembic revision --autogenerate -m "$1"
-else
-  env PYTHONPATH=src poetry run alembic revision --autogenerate -m "$1"
-fi
+env PYTHONPATH=src poetry run alembic revision --autogenerate -m "$1"
