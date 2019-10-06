@@ -19,4 +19,7 @@ def validate_input(schema):
     return decorator
 
 
-SELLER_AUTH_SCHEMA = {"email": {"type": "string"}, "password": {"type": "string"}}
+SELLER_AUTH_SCHEMA = {
+    "email": {"type": "string", "regex": "^.+@.+$"},
+    "password": {"type": "string", "minlength": 6},
+}
