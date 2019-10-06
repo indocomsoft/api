@@ -1,7 +1,21 @@
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, String, func
+import uuid
+from contextlib import contextmanager
+
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    String,
+    create_engine,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, sessionmaker
+
+from config import APP_CONFIG
 
 _base = declarative_base()
 
@@ -9,7 +23,7 @@ _base = declarative_base()
 class Base(_base):
     __abstract__ = True
 
-    id = Column(UUID, primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), on_update=func.now())
 
@@ -17,23 +31,28 @@ class Base(_base):
 class Seller(Base):
     __tablename__ = "sellers"
 
-    email = Column(String)
-    password = Column(String)
+    email = Column(String, nullable=False, unique=True)
+    hashed_password = Column(String, nullable=False)
+
+    invites = relationship("Invite", back_populates="origin_seller")
+    orders = relationship("SellOrder", back_populates="seller")
 
 
 class Buyer(Base):
     __tablename__ = "buyers"
 
-    email = Column(String)
+    email = Column(String, nullable=False, unique=True)
+
+    orders = relationship("BuyOrder", back_populates="buyer")
 
 
 class Invite(Base):
     __tablename__ = "invites"
 
-    origin_seller_id = Column(UUID, ForeignKey("sellers.id"))
-    destination_email = Column(String)
-    valid = Column(Boolean)
-    expiry_time = Column(DateTime)
+    origin_seller_id = Column(UUID, ForeignKey("sellers.id"), nullable=False)
+    destination_email = Column(String, nullable=False)
+    valid = Column(Boolean, nullable=False)
+    expiry_time = Column(DateTime, nullable=False)
 
     origin_seller = relationship("Seller", back_populates="invites")
 
@@ -41,30 +60,52 @@ class Invite(Base):
 class SellOrder(Base):
     __tablename__ = "sell_orders"
 
-    seller_id = Column(UUID, ForeignKey("sellers.id"))
-    number_of_shares = Column(Float)
-    price = Column(Float)
+    seller_id = Column(UUID, ForeignKey("sellers.id"), nullable=False)
+    number_of_shares = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)
 
-    sellers = relationship("Seller", back_populates="orders")
+    seller = relationship("Seller", back_populates="orders")
+    matches = relationship("Match", back_populates="sell_order")
 
 
 class BuyOrder(Base):
     __tablename__ = "buy_orders"
 
-    buyer_id = Column(UUID, ForeignKey("buyers.id"))
-    number_of_shares = Column(Float)
-    price = Column(Float)
+    buyer_id = Column(UUID, ForeignKey("buyers.id"), nullable=False)
+    number_of_shares = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)
 
-    buyers = relationship("Buyer", back_populates="orders")
+    buyer = relationship("Buyer", back_populates="orders")
+    matches = relationship("Match", back_populates="buy_order")
 
 
 class Match(Base):
     __tablename__ = "matches"
 
-    buy_order_id = Column(UUID, ForeignKey("buy_orders.id"))
-    sell_order_id = Column(UUID, ForeignKey("sell_orders.id"))
-    number_of_shares = Column(Float)
-    price = Column(Float)
+    buy_order_id = Column(UUID, ForeignKey("buy_orders.id"), nullable=False)
+    sell_order_id = Column(UUID, ForeignKey("sell_orders.id"), nullable=False)
+    number_of_shares = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)
 
     buy_order = relationship("BuyOrder", back_populates="matches")
     sell_order = relationship("SellOrder", back_populates="matches")
+
+
+engine = create_engine(APP_CONFIG["DATABASE_URL"])
+
+
+Session = sessionmaker(bind=engine)
+
+
+@contextmanager
+def session_scope():
+    """Provide a transactional scope around a series of operations."""
+    session = Session()
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()

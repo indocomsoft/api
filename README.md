@@ -16,6 +16,7 @@ poetry install
 Setup database (install Postgres first)
 ```
 ./setup_db.sh
+./run_migrations.sh
 ```
 
 ## Run app
@@ -31,4 +32,4 @@ Check (is run in CI): `./lint.sh`
 ## Database migrations
 Generate migrations: `./generate_migration.sh "Change foo"`
 
-Run migrations: `./run_migration.sh`
+Run migrations: `./run_migrations.sh`

@@ -4,7 +4,8 @@ from logging.config import fileConfig
 from sqlalchemy import create_engine, pool
 
 from alembic import context
-from src.database import Base
+from config import APP_CONFIG
+from database import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -22,7 +23,7 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-url = os.getenv("DATABASE_URL", "postgresql://acquity:acquity@localhost/acquity")
+url = APP_CONFIG["DATABASE_URL"]
 
 
 def run_migrations_offline(url):
