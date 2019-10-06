@@ -27,6 +27,19 @@ class Base(_base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), on_update=func.now())
 
+    def asdict(self):
+        d = {}
+        columns = self.__table__.columns.keys()
+
+        for col in columns:
+            item = getattr(self, col)
+
+            if isinstance(item, uuid.UUID):
+                d[col] = str(item)
+            else:
+                d[col] = item
+        return d
+
 
 class Seller(Base):
     __tablename__ = "sellers"

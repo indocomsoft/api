@@ -17,4 +17,7 @@ class SellerService:
     def authenticate(self, email, password):
         with session_scope() as session:
             seller = session.query(self.Seller).filter_by(email=email).one()
-            return self.hasher.verify(password, seller.hashed_password)
+            if self.hasher.verify(password, seller.hashed_password):
+                return seller.asdict()
+            else:
+                return None

@@ -2,10 +2,11 @@ from operator import itemgetter
 
 from sanic import Blueprint
 from sanic.response import json
+from sanic_jwt.exceptions import AuthenticationFailed
 
 from services import SellerService
 
-blueprint = Blueprint("root")
+blueprint = Blueprint("root", version="v1")
 
 
 @blueprint.get("/")
@@ -20,8 +21,9 @@ async def create_seller(request):
     return json("")
 
 
-@blueprint.post("/login/seller")
 async def seller_login(request):
     email, password = itemgetter("email", "password")(request.json)
-    password_is_correct = request.app.seller_service.authenticate(email, password)
-    return json(password_is_correct)
+    seller = request.app.seller_service.authenticate(email, password)
+    if seller is None:
+        raise AuthenticationFailed()
+    return {"id": seller["id"], "email": seller["email"]}
