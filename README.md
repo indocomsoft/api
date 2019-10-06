@@ -21,7 +21,7 @@ Setup database (install Postgres first)
 
 ## Run app
 ```
-./launch.sh
+env ACQUITY_ENV=DEVELOPMENT ./launch.sh
 ```
 
 ## Lint

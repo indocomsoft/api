@@ -22,6 +22,8 @@ argon2-cffi==19.1.0; extra == "argon2" \
     --hash=sha256:fbae1d08b52f9a791500c650ab51ba00e374eaeccb5dbaa41b99dab4fd4115e8 \
     --hash=sha256:fe91e3bd95aeae70366693dcc970db03a71619d19df6fbaabf662c3b3c54cdf8 \
     --hash=sha256:fec86ee6f913154846171f66ee30c893c0cde3d434911f8b31c1f84a9aea410e
+cerberus==1.3.1 \
+    --hash=sha256:0be48fc0dc84f83202a5309c0aa17cd5393e70731a1698a50d118b762fbe6875
 certifi==2019.9.11 \
     --hash=sha256:e4f3620cfea4f83eedc95b24abd9cd56f3c4b146dd0177e83a21b4eb49e21e50 \
     --hash=sha256:fd7c7c74727ddcf00e9acd26bba8da604ffec95bf1c2144e67aff7a8b50e6cef
