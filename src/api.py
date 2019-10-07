@@ -50,7 +50,7 @@ async def create_invite(request, user):
     )
 
 
-@blueprint.get("/sell_orders/")
+@blueprint.get("/sell_order/")
 @auth_required
 async def get_sell_orders_by_seller(request, user):
     return json(
@@ -58,7 +58,7 @@ async def get_sell_orders_by_seller(request, user):
     )
 
 
-@blueprint.post("/sell_orders/")
+@blueprint.post("/sell_order/")
 @auth_required
 @expects_json_object
 async def create_sell_order(request, user):
@@ -69,7 +69,7 @@ async def create_sell_order(request, user):
     )
 
 
-@blueprint.patch("/sell_orders/<id>")
+@blueprint.patch("/sell_order/<id>")
 @auth_required
 @expects_json_object
 async def edit_sell_order(request, user, id):
@@ -80,7 +80,7 @@ async def edit_sell_order(request, user, id):
     )
 
 
-@blueprint.delete("/sell_orders/<id>")
+@blueprint.delete("/sell_order/<id>")
 @auth_required
 async def delete_sell_order(request, user, id):
     return json(

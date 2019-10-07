@@ -1,5 +1,5 @@
 import datetime
-from exceptions import UninvitedSellerException
+from exceptions import UnauthorizedException
 
 from passlib.hash import argon2
 
@@ -25,7 +25,7 @@ class SellerService:
     def create_account(self, email, password):
         with session_scope() as session:
             if not self.can_create_account(email, session):
-                raise UninvitedSellerException(f"Email {email} is uninvited.")
+                raise UnauthorizedException(f"Email {email} is uninvited.")
 
             hashed_password = self.hasher.hash(password)
             seller = self.Seller(email=email, hashed_password=hashed_password)
@@ -114,7 +114,7 @@ class SellOrderService:
         with session_scope() as session:
             sell_order = session.query(self.SellOrder).filter_by(id=id).one()
             if sell_order.seller_id != subject_id:
-                raise UnauthorizedError("You need to own this order.")
+                raise UnauthorizedException("You need to own this order.")
 
             if new_number_of_shares is not None:
                 sell_order.number_of_shares = new_number_of_shares
@@ -129,7 +129,7 @@ class SellOrderService:
         with session_scope() as session:
             sell_order = session.query(self.SellOrder).filter_by(id=id).one()
             if sell_order.seller_id != subject_id:
-                raise UnauthorizedError("You need to own this order.")
+                raise UnauthorizedException("You need to own this order.")
 
             session.delete(sell_order)
         return {}
