@@ -23,6 +23,11 @@ Setup/reset database (install Postgres first)
 env ACQUITY_ENV=DEVELOPMENT ./launch.sh
 ```
 
+## Test
+```
+./test.sh
+```
+
 ## Lint
 Auto-fix: `./lint_fix.sh`
 

@@ -15,7 +15,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
-from config import APP_CONFIG
+from src.config import APP_CONFIG
 
 _base = declarative_base()
 

@@ -3,8 +3,8 @@ from sanic.response import json
 from sanic_jwt.decorators import inject_user, protected
 from sanic_jwt.exceptions import AuthenticationFailed
 
-from services import SellerService
-from utils import expects_json_object
+from src.services import SellerService
+from src.utils import expects_json_object
 
 blueprint = Blueprint("root", version="v1")
 
@@ -21,7 +21,7 @@ async def root(request):
 @blueprint.post("/seller/")
 @expects_json_object
 async def create_seller(request):
-    request.app.seller_service.create_account(**request.json)
+    request.app.seller_service.create_account(**request.json, check_invitation=True)
     return json({})
 
 

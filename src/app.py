@@ -1,5 +1,4 @@
 import traceback
-from exceptions import AcquityException
 
 from sanic import Blueprint, Sanic
 from sanic.exceptions import SanicException
@@ -8,9 +7,10 @@ from sanic_cors.extension import CORS as initialize_cors
 from sanic_jwt import Initialize as initialize_jwt
 from sanic_jwt import Responses
 
-from api import blueprint, seller_login
-from config import APP_CONFIG
-from services import InviteService, SellerService, SellOrderService
+from src.api import blueprint, seller_login
+from src.config import APP_CONFIG
+from src.exceptions import AcquityException
+from src.services import InviteService, SellerService, SellOrderService
 
 app = Sanic(load_env=False)
 app.config.update(APP_CONFIG)

@@ -1,6 +1,7 @@
-from collections import Mapping
-from exceptions import InvalidRequestException
+from collections.abc import Mapping
 from functools import wraps
+
+from src.exceptions import InvalidRequestException
 
 
 def expects_json_object(func):

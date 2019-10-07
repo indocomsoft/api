@@ -1,3 +1,3 @@
-from services import SellerService
+from src.services import SellerService
 
-SellerService().create_account(email="a@a", password="acquity")
+SellerService().create_account(email="a@a", password="acquity", check_invitation=False)

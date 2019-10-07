@@ -1,8 +1,9 @@
 import json
-from exceptions import InvalidRequestException
 from functools import wraps
 
 from cerberus import Validator
+
+from src.exceptions import InvalidRequestException
 
 
 def validate_input(schema):
@@ -36,7 +37,12 @@ SELLER_AUTH_SCHEMA = {
     "email": EMAIL_RULE,
     "password": {"type": "string", "minlength": 6},
 }
-CREATE_INVITE_SCHEMA = {"origin_seller_id": UUID_RULE, "destination_email": UUID_RULE}
+SELLER_AUTH_SCHEMA_WITH_INVITATION = {
+    "email": EMAIL_RULE,
+    "password": {"type": "string", "minlength": 6},
+    "check_invitation": {"type": "boolean"},
+}
+CREATE_INVITE_SCHEMA = {"origin_seller_id": UUID_RULE, "destination_email": EMAIL_RULE}
 CREATE_SELL_ORDER_SCHEMA = {
     "seller_id": UUID_RULE,
     "number_of_shares": NONNEGATIVE_NUMBER_RULE,
