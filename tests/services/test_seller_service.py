@@ -64,7 +64,7 @@ def test_get_seller():
     seller_id = seller_service.authenticate(email="a@a", password="123456")["id"]
 
     seller = seller_service.get_seller(id=seller_id)
-    assert_dict_in({"email": "a@a", "hashed_password": "123456"}, seller)
+    assert_dict_in({"email": "a@a"}, seller)
 
     with pytest.raises(NoResultFound):
         seller_service.get_seller(id="00000000-0000-0000-0000-000000000000")

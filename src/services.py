@@ -44,7 +44,9 @@ class SellerService:
     @validate_input({"id": UUID_RULE})
     def get_seller(self, id):
         with session_scope() as session:
-            return session.query(self.Seller).filter_by(id=id).one().asdict()
+            seller = session.query(self.Seller).filter_by(id=id).one().asdict()
+        seller.pop("hashed_password")
+        return seller
 
     def can_create_account(self, email, session):
         return (
