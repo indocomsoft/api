@@ -10,13 +10,14 @@ from sanic_jwt import Responses
 
 from api import blueprint, seller_login
 from config import APP_CONFIG
-from services import InviteService, SellerService
+from services import InviteService, SellerService, SellOrderService
 
 app = Sanic(load_env=False)
 app.config.update(APP_CONFIG)
 
 app.seller_service = SellerService()
 app.invite_service = InviteService()
+app.sell_order_service = SellOrderService()
 
 initialize_cors(app)
 

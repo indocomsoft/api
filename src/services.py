@@ -3,11 +3,14 @@ from exceptions import UninvitedSellerException
 
 from passlib.hash import argon2
 
-from database import Invite, Seller, session_scope
+from database import Invite, Seller, SellOrder, session_scope
 from schemata import (
     CREATE_INVITE_SCHEMA,
+    CREATE_SELL_ORDER_SCHEMA,
+    DELETE_SELL_ORDER_SCHEMA,
+    EDIT_SELL_ORDER_SCHEMA,
     SELLER_AUTH_SCHEMA,
-    generate_id_schema,
+    UUID_RULE,
     validate_input,
 )
 
@@ -37,7 +40,7 @@ class SellerService:
             else:
                 return None
 
-    @validate_input(generate_id_schema("id"))
+    @validate_input({"id": UUID_RULE})
     def get_seller(self, id):
         with session_scope() as session:
             return session.query(self.Seller).filter_by(id=id).one().asdict()
@@ -59,7 +62,7 @@ class InviteService:
     def __init__(self, Invite=Invite):
         self.Invite = Invite
 
-    @validate_input(generate_id_schema("origin_seller_id"))
+    @validate_input({"origin_seller_id": UUID_RULE})
     def get_invites(self, origin_seller_id):
         with session_scope() as session:
             invites = (
@@ -81,3 +84,52 @@ class InviteService:
             session.add(invite)
             session.commit()
             return invite.asdict()
+
+
+class SellOrderService:
+    def __init__(self, SellOrder=SellOrder):
+        self.SellOrder = SellOrder
+
+    @validate_input(CREATE_SELL_ORDER_SCHEMA)
+    def create_order(self, seller_id, number_of_shares, price):
+        with session_scope() as session:
+            sell_order = SellOrder(
+                seller_id=seller_id, number_of_shares=number_of_shares, price=price
+            )
+
+            session.add(sell_order)
+            session.commit()
+            return sell_order.asdict()
+
+    @validate_input({"seller_id": UUID_RULE})
+    def get_order_by_seller(self, seller_id):
+        with session_scope() as session:
+            sell_orders = (
+                session.query(self.SellOrder).filter_by(seller_id=seller_id).all()
+            )
+            return [sell_order.asdict() for sell_order in sell_orders]
+
+    @validate_input(EDIT_SELL_ORDER_SCHEMA)
+    def edit_order(self, id, subject_id, new_number_of_shares, new_price):
+        with session_scope() as session:
+            sell_order = session.query(self.SellOrder).filter_by(id=id).one()
+            if sell_order.seller_id != subject_id:
+                raise UnauthorizedError("You need to own this order.")
+
+            if new_number_of_shares is not None:
+                sell_order.number_of_shares = new_number_of_shares
+            if new_price is not None:
+                sell_order.price = new_price
+
+            session.commit()
+            return sell_order.asdict()
+
+    @validate_input(DELETE_SELL_ORDER_SCHEMA)
+    def delete_order(self, id, subject_id):
+        with session_scope() as session:
+            sell_order = session.query(self.SellOrder).filter_by(id=id).one()
+            if sell_order.seller_id != subject_id:
+                raise UnauthorizedError("You need to own this order.")
+
+            session.delete(sell_order)
+        return {}

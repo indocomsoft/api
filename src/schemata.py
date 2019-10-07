@@ -26,16 +26,26 @@ UUID_REGEX = (
 )
 EMAIL_REGEX = "^.+@.+$"
 
-
-def generate_id_schema(id_name):
-    return {id_name: {"type": "string", "regex": UUID_REGEX}}
+UUID_RULE = {"type": "string", "regex": UUID_REGEX}
+EMAIL_RULE = {"type": "string", "regex": EMAIL_REGEX}
+NONNEGATIVE_NUMBER_RULE = {"type": "number", "min": 0}
+OPTIONAL_NONNEGATIVE_NUMBER_RULE = {"type": "number", "min": 0, "required": False}
 
 
 SELLER_AUTH_SCHEMA = {
-    "email": {"type": "string", "regex": EMAIL_REGEX},
+    "email": EMAIL_RULE,
     "password": {"type": "string", "minlength": 6},
 }
-CREATE_INVITE_SCHEMA = {
-    "origin_seller_id": {"type": "string", "regex": UUID_REGEX},
-    "destination_email": {"type": "string", "regex": EMAIL_REGEX},
+CREATE_INVITE_SCHEMA = {"origin_seller_id": UUID_RULE, "destination_email": UUID_RULE}
+CREATE_SELL_ORDER_SCHEMA = {
+    "seller_id": UUID_RULE,
+    "number_of_shares": NONNEGATIVE_NUMBER_RULE,
+    "price": NONNEGATIVE_NUMBER_RULE,
 }
+EDIT_SELL_ORDER_SCHEMA = {
+    "id": UUID_RULE,
+    "subject_id": UUID_RULE,
+    "new_number_of_shares": OPTIONAL_NONNEGATIVE_NUMBER_RULE,
+    "new_price": OPTIONAL_NONNEGATIVE_NUMBER_RULE,
+}
+DELETE_SELL_ORDER_SCHEMA = {"id": UUID_RULE, "subject_id": UUID_RULE}
