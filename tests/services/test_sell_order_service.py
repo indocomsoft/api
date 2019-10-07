@@ -14,7 +14,7 @@ sell_order_service = SellOrderService(SellOrder=SellOrder)
 
 def test_get_orders_by_seller():
     with session_scope() as session:
-        seller = Seller(email="a@a", hashed_password="123456")
+        seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
         session.add(seller)
         session.commit()
 
@@ -46,7 +46,7 @@ def test_get_orders_by_seller():
 
 def test_create_order():
     with session_scope() as session:
-        seller = Seller(email="a@a", hashed_password="123456")
+        seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
         session.add(seller)
         session.commit()
 
@@ -62,7 +62,7 @@ def test_create_order():
 
 def test_edit_order():
     with session_scope() as session:
-        seller = Seller(email="a@a", hashed_password="123456")
+        seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
         session.add(seller)
         session.commit()
 
@@ -95,7 +95,7 @@ def test_edit_order():
 
 def test_delete_order():
     with session_scope() as session:
-        seller = Seller(email="a@a", hashed_password="123456")
+        seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
         session.add(seller)
         session.commit()
 

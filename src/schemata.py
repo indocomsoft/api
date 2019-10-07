@@ -39,6 +39,7 @@ SELLER_AUTH_SCHEMA = {
 }
 SELLER_AUTH_SCHEMA_WITH_INVITATION = {
     "email": EMAIL_RULE,
+    "full_name": {"type": "string"},
     "password": {"type": "string", "minlength": 6},
     "check_invitation": {"type": "boolean"},
 }

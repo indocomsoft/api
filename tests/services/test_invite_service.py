@@ -12,7 +12,7 @@ invite_service = InviteService()
 
 def test_get_invites():
     with session_scope() as session:
-        seller = Seller(email="a@a", hashed_password="123456")
+        seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
         session.add(seller)
         session.commit()
 
@@ -48,7 +48,7 @@ def test_get_invites():
 
 def test_create_invite():
     with session_scope() as session:
-        seller = Seller(email="a@a", hashed_password="123456")
+        seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
         session.add(seller)
         session.commit()
 

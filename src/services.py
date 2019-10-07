@@ -23,13 +23,15 @@ class SellerService:
         self.hasher = hasher
 
     @validate_input(SELLER_AUTH_SCHEMA_WITH_INVITATION)
-    def create_account(self, email, password, check_invitation):
+    def create_account(self, email, password, full_name, check_invitation):
         with session_scope() as session:
             if check_invitation and not self.can_create_account(email, session):
                 raise UnauthorizedException(f"Email {email} is uninvited.")
 
             hashed_password = self.hasher.hash(password)
-            seller = self.Seller(email=email, hashed_password=hashed_password)
+            seller = self.Seller(
+                email=email, full_name=full_name, hashed_password=hashed_password
+            )
             session.add(seller)
 
     @validate_input(SELLER_AUTH_SCHEMA)

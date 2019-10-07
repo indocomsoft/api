@@ -48,6 +48,7 @@ class Seller(Base):
 
     email = Column(String, nullable=False, unique=True)
     hashed_password = Column(String, nullable=False)
+    full_name = Column(String, nullable=False)
 
     invites = relationship("Invite", back_populates="origin_seller")
     orders = relationship("SellOrder", back_populates="seller")

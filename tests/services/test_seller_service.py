@@ -14,20 +14,20 @@ seller_service = SellerService(Seller=Seller, hasher=plaintext)
 
 def test_create_account_no_check_invitation():
     seller_service.create_account(
-        email="a@a", password="123456", check_invitation=False
+        email="a@a", password="123456", full_name="Ben", check_invitation=False
     )
 
 
 def test_create_account_check_invitation_unauthorized():
     with pytest.raises(UnauthorizedException):
         seller_service.create_account(
-            email="c@c", password="123456", check_invitation=True
+            email="c@c", password="123456", full_name="Ben", check_invitation=True
         )
 
 
 def test_create_account_check_invitation_authorized():
     with session_scope() as session:
-        seller = Seller(email="a@a", hashed_password="123456")
+        seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
         session.add(seller)
         session.commit()
 
@@ -39,7 +39,9 @@ def test_create_account_check_invitation_authorized():
         )
         session.add(invite)
 
-    seller_service.create_account(email="b@b", password="123456", check_invitation=True)
+    seller_service.create_account(
+        email="b@b", password="123456", full_name="Ben", check_invitation=True
+    )
 
     with session_scope() as session:
         session.query(Seller).filter_by(email="b@b", hashed_password="123456").one()
@@ -47,24 +49,26 @@ def test_create_account_check_invitation_authorized():
 
 def test_authenticate():
     with session_scope() as session:
-        seller = Seller(email="a@a", hashed_password="123456")
+        seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
         session.add(seller)
         session.commit()
 
     seller = seller_service.authenticate(email="a@a", password="123456")
-    assert_dict_in({"email": "a@a", "hashed_password": "123456"}, seller)
+    assert_dict_in(
+        {"email": "a@a", "hashed_password": "123456", "full_name": "Ben"}, seller
+    )
 
 
 def test_get_seller():
     with session_scope() as session:
-        seller = Seller(email="a@a", hashed_password="123456")
+        seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
         session.add(seller)
         session.commit()
 
     seller_id = seller_service.authenticate(email="a@a", password="123456")["id"]
 
     seller = seller_service.get_seller(id=seller_id)
-    assert_dict_in({"email": "a@a"}, seller)
+    assert_dict_in({"email": "a@a", "full_name": "Ben"}, seller)
 
     with pytest.raises(NoResultFound):
         seller_service.get_seller(id="00000000-0000-0000-0000-000000000000")
