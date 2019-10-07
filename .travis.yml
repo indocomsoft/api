@@ -4,7 +4,7 @@ cache: pip
 services:
   - postgresql
 before_install:
-  - 'pip install --pre poetry'
+  - 'pip install --pre "poetry==1.0.0a5"'
 install:
   - 'poetry install'
 before_script:
