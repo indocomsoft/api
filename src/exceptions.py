@@ -11,3 +11,7 @@ class AcquityException(Exception):
 
 class InvalidRequestException(AcquityException):
     status_code = 422
+
+
+class UninvitedSellerException(AcquityException):
+    status_code = 403

@@ -1,4 +1,5 @@
 import datetime
+from exceptions import UninvitedSellerException
 
 from passlib.hash import argon2
 
@@ -12,13 +13,17 @@ from schemata import (
 
 
 class SellerService:
-    def __init__(self, Seller=Seller, hasher=argon2):
+    def __init__(self, Seller=Seller, Invite=Invite, hasher=argon2):
         self.Seller = Seller
+        self.Invite = Invite
         self.hasher = hasher
 
     @validate_input(SELLER_AUTH_SCHEMA)
     def create_account(self, email, password):
         with session_scope() as session:
+            if not self.can_create_account(email, session):
+                raise UninvitedSellerException(f"Email {email} is uninvited.")
+
             hashed_password = self.hasher.hash(password)
             seller = self.Seller(email=email, hashed_password=hashed_password)
             session.add(seller)
@@ -36,6 +41,18 @@ class SellerService:
     def get_seller(self, id):
         with session_scope() as session:
             return session.query(self.Seller).filter_by(id=id).one().asdict()
+
+    def can_create_account(self, email, session):
+        return (
+            session.query(self.Invite)
+            .filter(
+                self.Invite.destination_email == email,
+                self.Invite.valid == True,
+                self.Invite.expiry_time >= datetime.datetime.now(),
+            )
+            .count()
+            > 0
+        )
 
 
 class InviteService:
