@@ -13,10 +13,9 @@ Install dependencies
 ```
 poetry install
 ```
-Setup database (install Postgres first)
+Setup/reset database (install Postgres first)
 ```
 ./setup_db.sh
-./run_migrations.sh
 ```
 
 ## Run app

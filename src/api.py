@@ -4,6 +4,7 @@ from sanic_jwt.decorators import inject_user, protected
 from sanic_jwt.exceptions import AuthenticationFailed
 
 from services import SellerService
+from utils import expects_json_object
 
 blueprint = Blueprint("root", version="v1")
 
@@ -14,11 +15,13 @@ async def root(request):
 
 
 @blueprint.post("/seller/")
+@expects_json_object
 async def create_seller(request):
     request.app.seller_service.create_account(**request.json)
     return json({})
 
 
+@expects_json_object
 async def seller_login(request):
     seller = request.app.seller_service.authenticate(**request.json)
     if seller is None:
@@ -36,6 +39,7 @@ async def get_invites(request, user):
 @blueprint.post("/invite/")
 @inject_user(blueprint)
 @protected(blueprint)
+@expects_json_object
 async def create_invite(request, user):
     return json(
         request.app.invite_service.create_invite(

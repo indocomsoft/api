@@ -24,8 +24,10 @@ class Base(_base):
     __abstract__ = True
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), on_update=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), on_update=func.now()
+    )
 
     def asdict(self):
         d = {}
@@ -65,7 +67,7 @@ class Invite(Base):
     origin_seller_id = Column(UUID, ForeignKey("sellers.id"), nullable=False)
     destination_email = Column(String, nullable=False)
     valid = Column(Boolean, nullable=False)
-    expiry_time = Column(DateTime, nullable=False)
+    expiry_time = Column(DateTime(timezone=True), nullable=False)
 
     origin_seller = relationship("Seller", back_populates="invites")
 

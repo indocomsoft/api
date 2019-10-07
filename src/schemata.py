@@ -1,11 +1,13 @@
 import json
 from exceptions import InvalidRequestException
+from functools import wraps
 
 from cerberus import Validator
 
 
 def validate_input(schema):
     def decorator(func):
+        @wraps(func)
         def decorated_func(*args, **kwargs):
             validator = Validator(schema, require_all=True)
             res = validator.validate(kwargs)
