@@ -48,6 +48,7 @@ CREATE_SELL_ORDER_SCHEMA = {
     "seller_id": UUID_RULE,
     "number_of_shares": NONNEGATIVE_NUMBER_RULE,
     "price": NONNEGATIVE_NUMBER_RULE,
+    "security_id": UUID_RULE,
 }
 EDIT_SELL_ORDER_SCHEMA = {
     "id": UUID_RULE,

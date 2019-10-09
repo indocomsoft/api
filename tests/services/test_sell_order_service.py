@@ -1,11 +1,8 @@
 import datetime
 
 import pytest
-from passlib.hash import plaintext
-from sqlalchemy.orm.exc import NoResultFound
 
-from src.database import Seller, SellOrder, session_scope
-from src.exceptions import UnauthorizedException
+from src.database import Security, Seller, SellOrder, session_scope
 from src.services import SellOrderService
 from tests.utils import assert_dict_in
 
@@ -15,19 +12,23 @@ sell_order_service = SellOrderService(SellOrder=SellOrder)
 def test_get_orders_by_seller():
     with session_scope() as session:
         seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
-        session.add(seller)
+        security = Security(name="Grab")
+        session.add_all([seller, security])
         session.commit()
 
         seller_id = str(seller.id)
+        security_id = str(security.id)
         sell_order_params = {
             "seller_id": seller_id,
             "number_of_shares": 20,
             "price": 30,
+            "security_id": security_id,
         }
         sell_order_params_2 = {
             "seller_id": seller_id,
             "number_of_shares": 40,
             "price": 50,
+            "security_id": security_id,
         }
 
         sell_order = SellOrder(**sell_order_params)
@@ -47,12 +48,19 @@ def test_get_orders_by_seller():
 def test_create_order():
     with session_scope() as session:
         seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
-        session.add(seller)
+        security = Security(name="Grab")
+        session.add_all([seller, security])
         session.commit()
 
         seller_id = str(seller.id)
+        security_id = str(security.id)
 
-    sell_order_params = {"seller_id": seller_id, "number_of_shares": 20, "price": 30}
+    sell_order_params = {
+        "seller_id": seller_id,
+        "number_of_shares": 20,
+        "price": 30,
+        "security_id": security_id,
+    }
     sell_order_id = sell_order_service.create_order(**sell_order_params)["id"]
 
     with session_scope() as session:
@@ -63,14 +71,17 @@ def test_create_order():
 def test_edit_order():
     with session_scope() as session:
         seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
-        session.add(seller)
+        security = Security(name="Grab")
+        session.add_all([seller, security])
         session.commit()
 
         seller_id = str(seller.id)
+        security_id = str(security.id)
         sell_order_params = {
             "seller_id": seller_id,
             "number_of_shares": 20,
             "price": 30,
+            "security_id": security_id,
         }
 
         sell_order = SellOrder(**sell_order_params)
@@ -96,14 +107,17 @@ def test_edit_order():
 def test_delete_order():
     with session_scope() as session:
         seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
-        session.add(seller)
+        security = Security(name="Grab")
+        session.add_all([seller, security])
         session.commit()
 
         seller_id = str(seller.id)
+        security_id = str(security.id)
         sell_order_params = {
             "seller_id": seller_id,
             "number_of_shares": 20,
             "price": 30,
+            "security_id": security_id,
         }
 
         sell_order = SellOrder(**sell_order_params)

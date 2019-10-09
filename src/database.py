@@ -73,26 +73,39 @@ class Invite(Base):
     origin_seller = relationship("Seller", back_populates="invites")
 
 
+class Security(Base):
+    __tablename__ = "securities"
+
+    name = Column(String, nullable=False, unique=True)
+
+    sell_orders = relationship("SellOrder", back_populates="security")
+    buy_orders = relationship("BuyOrder", back_populates="security")
+
+
 class SellOrder(Base):
     __tablename__ = "sell_orders"
 
     seller_id = Column(UUID, ForeignKey("sellers.id"), nullable=False)
+    security_id = Column(UUID, ForeignKey("securities.id"), nullable=False)
     number_of_shares = Column(Float, nullable=False)
     price = Column(Float, nullable=False)
 
     seller = relationship("Seller", back_populates="orders")
     matches = relationship("Match", back_populates="sell_order")
+    security = relationship("Security", back_populates="sell_orders")
 
 
 class BuyOrder(Base):
     __tablename__ = "buy_orders"
 
     buyer_id = Column(UUID, ForeignKey("buyers.id"), nullable=False)
+    security_id = Column(UUID, ForeignKey("securities.id"), nullable=False)
     number_of_shares = Column(Float, nullable=False)
     price = Column(Float, nullable=False)
 
     buyer = relationship("Buyer", back_populates="orders")
     matches = relationship("Match", back_populates="buy_order")
+    security = relationship("Security", back_populates="buy_orders")
 
 
 class Match(Base):

@@ -10,7 +10,7 @@ from sanic_jwt import Responses
 from src.api import blueprint, seller_login
 from src.config import APP_CONFIG
 from src.exceptions import AcquityException
-from src.services import InviteService, SellerService, SellOrderService
+from src.services import InviteService, SecurityService, SellerService, SellOrderService
 
 app = Sanic(load_env=False)
 app.config.update(APP_CONFIG)
@@ -18,6 +18,7 @@ app.config.update(APP_CONFIG)
 app.seller_service = SellerService()
 app.invite_service = InviteService()
 app.sell_order_service = SellOrderService()
+app.security_service = SecurityService()
 
 initialize_cors(app)
 

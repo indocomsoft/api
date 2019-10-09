@@ -88,3 +88,9 @@ async def delete_sell_order(request, user, id):
             **request.json, id=id, subject_id=user["id"]
         )
     )
+
+
+@blueprint.get("/security/")
+@auth_required
+async def get_all_securities(request, user):
+    return json(request.app.security_service.get_all())
