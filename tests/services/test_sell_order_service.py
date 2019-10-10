@@ -2,30 +2,37 @@ import datetime
 
 import pytest
 
-from src.database import Security, Seller, SellOrder, session_scope
+from src.database import Security, SellOrder, User, session_scope
+from src.exceptions import UnauthorizedException
 from src.services import SellOrderService
 from tests.utils import assert_dict_in
 
 sell_order_service = SellOrderService(SellOrder=SellOrder)
 
 
-def test_get_orders_by_seller():
+def test_get_orders_by_user():
     with session_scope() as session:
-        seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
+        user = User(
+            can_buy=False,
+            can_sell=True,
+            email="a@a",
+            hashed_password="123456",
+            full_name="Ben",
+        )
         security = Security(name="Grab")
-        session.add_all([seller, security])
+        session.add_all([user, security])
         session.commit()
 
-        seller_id = str(seller.id)
+        user_id = str(user.id)
         security_id = str(security.id)
         sell_order_params = {
-            "seller_id": seller_id,
+            "user_id": user_id,
             "number_of_shares": 20,
             "price": 30,
             "security_id": security_id,
         }
         sell_order_params_2 = {
-            "seller_id": seller_id,
+            "user_id": user_id,
             "number_of_shares": 40,
             "price": 50,
             "security_id": security_id,
@@ -35,7 +42,7 @@ def test_get_orders_by_seller():
         sell_order_2 = SellOrder(**sell_order_params_2)
         session.add_all([sell_order, sell_order_2])
 
-    orders = sell_order_service.get_order_by_seller(seller_id=seller_id)
+    orders = sell_order_service.get_orders_by_user(user_id=user_id)
     assert len(orders) == 2
 
     sell_order_20 = orders[0] if orders[0]["number_of_shares"] == 20 else orders[1]
@@ -45,18 +52,24 @@ def test_get_orders_by_seller():
     assert_dict_in(sell_order_params_2, sell_order_40)
 
 
-def test_create_order():
+def test_create_order__authorized():
     with session_scope() as session:
-        seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
+        user = User(
+            can_buy=False,
+            can_sell=True,
+            email="a@a",
+            hashed_password="123456",
+            full_name="Ben",
+        )
         security = Security(name="Grab")
-        session.add_all([seller, security])
+        session.add_all([user, security])
         session.commit()
 
-        seller_id = str(seller.id)
+        user_id = str(user.id)
         security_id = str(security.id)
 
     sell_order_params = {
-        "seller_id": seller_id,
+        "user_id": user_id,
         "number_of_shares": 20,
         "price": 30,
         "security_id": security_id,
@@ -68,17 +81,45 @@ def test_create_order():
     assert_dict_in(sell_order_params, sell_order)
 
 
-def test_edit_order():
+def test_create_order__unauthorized():
     with session_scope() as session:
-        seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
+        user = User(
+            can_buy=False,
+            can_sell=False,
+            email="a@a",
+            hashed_password="123456",
+            full_name="Ben",
+        )
         security = Security(name="Grab")
-        session.add_all([seller, security])
+        session.add_all([user, security])
         session.commit()
 
-        seller_id = str(seller.id)
+        user_id = str(user.id)
+        security_id = str(security.id)
+
+    with pytest.raises(UnauthorizedException):
+        sell_order_service.create_order(
+            user_id=user_id, number_of_shares=20, price=30, security_id=security_id
+        )
+
+
+def test_edit_order():
+    with session_scope() as session:
+        user = User(
+            can_buy=False,
+            can_sell=True,
+            email="a@a",
+            hashed_password="123456",
+            full_name="Ben",
+        )
+        security = Security(name="Grab")
+        session.add_all([user, security])
+        session.commit()
+
+        user_id = str(user.id)
         security_id = str(security.id)
         sell_order_params = {
-            "seller_id": seller_id,
+            "user_id": user_id,
             "number_of_shares": 20,
             "price": 30,
             "security_id": security_id,
@@ -91,7 +132,7 @@ def test_edit_order():
         sell_order_id = str(sell_order.id)
 
     sell_order_service.edit_order(
-        id=sell_order_id, subject_id=seller_id, new_number_of_shares=50
+        id=sell_order_id, subject_id=user_id, new_number_of_shares=50
     )
 
     with session_scope() as session:
@@ -106,15 +147,21 @@ def test_edit_order():
 
 def test_delete_order():
     with session_scope() as session:
-        seller = Seller(email="a@a", hashed_password="123456", full_name="Ben")
+        user = User(
+            can_buy=False,
+            can_sell=True,
+            email="a@a",
+            hashed_password="123456",
+            full_name="Ben",
+        )
         security = Security(name="Grab")
-        session.add_all([seller, security])
+        session.add_all([user, security])
         session.commit()
 
-        seller_id = str(seller.id)
+        user_id = str(user.id)
         security_id = str(security.id)
         sell_order_params = {
-            "seller_id": seller_id,
+            "user_id": user_id,
             "number_of_shares": 20,
             "price": 30,
             "security_id": security_id,
@@ -126,7 +173,7 @@ def test_delete_order():
 
         sell_order_id = str(sell_order.id)
 
-    sell_order_service.delete_order(id=sell_order_id, subject_id=seller_id)
+    sell_order_service.delete_order(id=sell_order_id, subject_id=user_id)
 
     with session_scope() as session:
         assert session.query(SellOrder).filter_by(id=sell_order_id).count() == 0

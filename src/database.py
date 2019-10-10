@@ -43,34 +43,17 @@ class Base(_base):
         return d
 
 
-class Seller(Base):
-    __tablename__ = "sellers"
+class User(Base):
+    __tablename__ = "users"
 
     email = Column(String, nullable=False, unique=True)
     hashed_password = Column(String, nullable=False)
     full_name = Column(String, nullable=False)
+    can_buy = Column(Boolean, nullable=False)
+    can_sell = Column(Boolean, nullable=False)
 
-    invites = relationship("Invite", back_populates="origin_seller")
-    orders = relationship("SellOrder", back_populates="seller")
-
-
-class Buyer(Base):
-    __tablename__ = "buyers"
-
-    email = Column(String, nullable=False, unique=True)
-
-    orders = relationship("BuyOrder", back_populates="buyer")
-
-
-class Invite(Base):
-    __tablename__ = "invites"
-
-    origin_seller_id = Column(UUID, ForeignKey("sellers.id"), nullable=False)
-    destination_email = Column(String, nullable=False)
-    valid = Column(Boolean, nullable=False)
-    expiry_time = Column(DateTime(timezone=True), nullable=False)
-
-    origin_seller = relationship("Seller", back_populates="invites")
+    sell_orders = relationship("SellOrder", back_populates="user")
+    buy_orders = relationship("BuyOrder", back_populates="user")
 
 
 class Security(Base):
@@ -85,12 +68,12 @@ class Security(Base):
 class SellOrder(Base):
     __tablename__ = "sell_orders"
 
-    seller_id = Column(UUID, ForeignKey("sellers.id"), nullable=False)
+    user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
     security_id = Column(UUID, ForeignKey("securities.id"), nullable=False)
     number_of_shares = Column(Float, nullable=False)
     price = Column(Float, nullable=False)
 
-    seller = relationship("Seller", back_populates="orders")
+    user = relationship("User", back_populates="sell_orders")
     matches = relationship("Match", back_populates="sell_order")
     security = relationship("Security", back_populates="sell_orders")
 
@@ -98,12 +81,12 @@ class SellOrder(Base):
 class BuyOrder(Base):
     __tablename__ = "buy_orders"
 
-    buyer_id = Column(UUID, ForeignKey("buyers.id"), nullable=False)
+    user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
     security_id = Column(UUID, ForeignKey("securities.id"), nullable=False)
     number_of_shares = Column(Float, nullable=False)
     price = Column(Float, nullable=False)
 
-    buyer = relationship("Buyer", back_populates="orders")
+    user = relationship("User", back_populates="buy_orders")
     matches = relationship("Match", back_populates="buy_order")
     security = relationship("Security", back_populates="buy_orders")
 

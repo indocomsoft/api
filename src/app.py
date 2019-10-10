@@ -7,16 +7,15 @@ from sanic_cors.extension import CORS as initialize_cors
 from sanic_jwt import Initialize as initialize_jwt
 from sanic_jwt import Responses
 
-from src.api import blueprint, seller_login
+from src.api import blueprint, user_login
 from src.config import APP_CONFIG
 from src.exceptions import AcquityException
-from src.services import InviteService, SecurityService, SellerService, SellOrderService
+from src.services import SecurityService, SellOrderService, UserService
 
 app = Sanic(load_env=False)
 app.config.update(APP_CONFIG)
 
-app.seller_service = SellerService()
-app.invite_service = InviteService()
+app.user_service = UserService()
 app.sell_order_service = SellOrderService()
 app.security_service = SecurityService()
 
@@ -40,9 +39,9 @@ class AcquityJwtResponses(Responses):
         return json({"error": reasons}, status=exception.status_code)
 
 
-async def retrieve_seller(request, payload, *args, **kwargs):
+async def retrieve_user(request, payload, *args, **kwargs):
     if payload is not None:
-        return request.app.seller_service.get_seller(id=payload.get("id"))
+        return request.app.user_service.get_user(id=payload.get("id"))
     else:
         return None
 
@@ -50,9 +49,9 @@ async def retrieve_seller(request, payload, *args, **kwargs):
 initialize_jwt(
     blueprint,
     app=app,
-    authenticate=seller_login,
+    authenticate=user_login,
     responses_class=AcquityJwtResponses,
-    retrieve_user=retrieve_seller,
+    retrieve_user=retrieve_user,
 )
 
 app.blueprint(blueprint)
