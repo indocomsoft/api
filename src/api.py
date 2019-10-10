@@ -29,7 +29,7 @@ async def user_login(request):
     user = request.app.user_service.authenticate(**request.json)
     if user is None:
         raise AuthenticationFailed()
-    return {"id": seller["id"]}
+    return {"id": user["id"]}
 
 
 @blueprint.post("/invite/")
@@ -45,10 +45,8 @@ async def create_invite(request, user):
 
 @blueprint.get("/sell_order/")
 @auth_required
-async def get_sell_orders_by_seller(request, user):
-    return json(
-        request.app.sell_order_service.get_order_by_seller(seller_id=user["id"])
-    )
+async def get_sell_orders_by_user(request, user):
+    return json(request.app.sell_order_service.get_orders_by_user(user_id=user["id"]))
 
 
 @blueprint.post("/sell_order/")

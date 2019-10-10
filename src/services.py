@@ -65,6 +65,7 @@ class UserService:
 
     @validate_input(USER_AUTH_SCHEMA)
     def authenticate(self, email, password):
+        print(email, password)
         with session_scope() as session:
             user = session.query(self.User).filter_by(email=email).one()
             if self.hasher.verify(password, user.hashed_password):
