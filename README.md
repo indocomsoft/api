@@ -19,7 +19,10 @@ Setup/reset database (install Postgres first)
 ```
 ./setup_db.sh
 ```
-
+Add the environmental variables CLIENT_ID and CLIENT_SECRET
+```
+cp .env.default .env
+```
 ## Run app
 ```
 env ACQUITY_ENV=DEVELOPMENT ./launch.sh

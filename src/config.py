@@ -1,5 +1,9 @@
 from os import getenv
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 ACQUITY_ENV = getenv("ACQUITY_ENV")
 DEFAULT_DATABASE_URL = ""
 if ACQUITY_ENV == "DEVELOPMENT":
@@ -17,4 +21,6 @@ APP_CONFIG = {
         "JWT_SECRET",
         "secret" if getenv("ACQUITY_ENV") in ["DEVELOPMENT", "TEST"] else "",
     ),
+    "CLIENT_ID": getenv("CLIENT_ID"),
+    "CLIENT_SECRET": getenv("CLIENT_SECRET"),
 }

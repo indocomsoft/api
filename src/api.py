@@ -83,3 +83,13 @@ async def delete_sell_order(request, user, id):
 @protected(blueprint)
 async def get_all_securities(request):
     return json(request.app.security_service.get_all())
+
+
+@blueprint.post("/user/linkedin/")
+@auth_required
+async def create_user_linkedin(request, user):
+    return json(
+        request.app.linkedin_service.activate_buyer_privileges(
+            **request.json, user_email=user.get("email")
+        )
+    )
