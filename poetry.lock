@@ -373,7 +373,7 @@ version = "2.8.0"
 six = ">=1.5"
 
 [[package]]
-category = "dev"
+category = "main"
 description = "Add .env support to your django/flask apps in development and deployments"
 name = "python-dotenv"
 optional = false
@@ -585,7 +585,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["pathlib2", "contextlib2", "unittest2"]
 
 [metadata]
-content-hash = "243e9adff608a6aebe9303f036545bcf05a587960482777927fa86ee4ac7608e"
+content-hash = "be3cb4d35f93014153d21e928b6c0a6f8be9bd0a8d97baec15e7486e210d68fa"
 python-versions = "^3.7"
 
 [metadata.hashes]
