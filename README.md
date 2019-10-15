@@ -25,7 +25,7 @@ cp .env.default .env
 ```
 ## Run app
 ```
-env ACQUITY_ENV=DEVELOPMENT ./launch.sh
+./launch.sh
 ```
 
 ## Test
@@ -41,4 +41,4 @@ Check (is run in CI): `./lint.sh`
 ## Database migrations
 Generate migrations: `./generate_migration.sh "Change foo"`
 
-Run migrations: `env ACQUITY_ENV=DEVELOPMENT ./run_migrations.sh`
+Run migrations: `./run_migrations.sh`

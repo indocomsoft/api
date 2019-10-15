@@ -72,10 +72,12 @@ class SellOrder(Base):
     security_id = Column(UUID, ForeignKey("securities.id"), nullable=False)
     number_of_shares = Column(Float, nullable=False)
     price = Column(Float, nullable=False)
+    round_id = Column(UUID, ForeignKey("rounds.id"))
 
     user = relationship("User", back_populates="sell_orders")
     matches = relationship("Match", back_populates="sell_order")
     security = relationship("Security", back_populates="sell_orders")
+    round = relationship("Round", back_populates="sell_orders")
 
 
 class BuyOrder(Base):
@@ -85,10 +87,12 @@ class BuyOrder(Base):
     security_id = Column(UUID, ForeignKey("securities.id"), nullable=False)
     number_of_shares = Column(Float, nullable=False)
     price = Column(Float, nullable=False)
+    round_id = Column(UUID, ForeignKey("rounds.id"))
 
     user = relationship("User", back_populates="buy_orders")
     matches = relationship("Match", back_populates="buy_order")
     security = relationship("Security", back_populates="buy_orders")
+    round = relationship("Round", back_populates="buy_orders")
 
 
 class Match(Base):
@@ -101,6 +105,16 @@ class Match(Base):
 
     buy_order = relationship("BuyOrder", back_populates="matches")
     sell_order = relationship("SellOrder", back_populates="matches")
+
+
+class Round(Base):
+    __tablename__ = "rounds"
+
+    end_time = Column(DateTime(timezone=True), nullable=False)
+    is_concluded = Column(Boolean, nullable=False)
+
+    buy_orders = relationship("BuyOrder", back_populates="round")
+    sell_orders = relationship("SellOrder", back_populates="round")
 
 
 engine = create_engine(APP_CONFIG["DATABASE_URL"])
