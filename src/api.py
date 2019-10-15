@@ -79,6 +79,42 @@ async def delete_sell_order(request, user, id):
     )
 
 
+@blueprint.get("/buy_order/")
+@auth_required
+async def get_buy_orders_by_user(request, user):
+    return json(request.app.buy_order_service.get_orders_by_user(user_id=user["id"]))
+
+
+@blueprint.post("/buy_order/")
+@auth_required
+@expects_json_object
+async def create_buy_order(request, user):
+    return json(
+        request.app.buy_order_service.create_order(**request.json, user_id=user["id"])
+    )
+
+
+@blueprint.patch("/buy_order/<id>")
+@auth_required
+@expects_json_object
+async def edit_buy_order(request, user, id):
+    return json(
+        request.app.buy_order_service.edit_order(
+            **request.json, id=id, subject_id=user["id"]
+        )
+    )
+
+
+@blueprint.delete("/buy_order/<id>")
+@auth_required
+async def delete_buy_order(request, user, id):
+    return json(
+        request.app.buy_order_service.edit_order(
+            **request.json, id=id, subject_id=user["id"]
+        )
+    )
+
+
 @blueprint.get("/security/")
 @protected(blueprint)
 async def get_all_securities(request):

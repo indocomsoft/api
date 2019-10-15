@@ -4,13 +4,13 @@ import requests
 from passlib.hash import argon2
 
 from src.config import APP_CONFIG
-from src.database import Security, SellOrder, User, session_scope
+from src.database import BuyOrder, Security, SellOrder, User, session_scope
 from src.exceptions import InvalidRequestException, UnauthorizedException
 from src.schemata import (
-    CREATE_SELL_ORDER_SCHEMA,
+    CREATE_ORDER_SCHEMA,
     CREATE_USER_SCHEMA,
-    DELETE_SELL_ORDER_SCHEMA,
-    EDIT_SELL_ORDER_SCHEMA,
+    DELETE_ORDER_SCHEMA,
+    EDIT_ORDER_SCHEMA,
     EMAIL_RULE,
     INVITE_SCHEMA,
     LINKEDIN_BUYER_PRIVILEGES_SCHEMA,
@@ -96,70 +96,6 @@ class UserService:
         return user
 
 
-class SellOrderService:
-    def __init__(self, SellOrder=SellOrder, User=User):
-        self.SellOrder = SellOrder
-        self.User = User
-
-    @validate_input(CREATE_SELL_ORDER_SCHEMA)
-    def create_order(self, user_id, number_of_shares, price, security_id):
-        with session_scope() as session:
-            user = session.query(self.User).filter_by(id=user_id).one()
-            if not user.can_sell:
-                raise UnauthorizedException("This user cannot sell securities.")
-
-            sell_order = self.SellOrder(
-                user_id=user_id,
-                number_of_shares=number_of_shares,
-                price=price,
-                security_id=security_id,
-            )
-
-            session.add(sell_order)
-            session.commit()
-            return sell_order.asdict()
-
-    @validate_input({"user_id": UUID_RULE})
-    def get_orders_by_user(self, user_id):
-        with session_scope() as session:
-            sell_orders = session.query(self.SellOrder).filter_by(user_id=user_id).all()
-            return [sell_order.asdict() for sell_order in sell_orders]
-
-    @validate_input(EDIT_SELL_ORDER_SCHEMA)
-    def edit_order(self, id, subject_id, new_number_of_shares=None, new_price=None):
-        with session_scope() as session:
-            sell_order = session.query(self.SellOrder).filter_by(id=id).one()
-            if sell_order.user_id != subject_id:
-                raise UnauthorizedException("You need to own this order.")
-
-            if new_number_of_shares is not None:
-                sell_order.number_of_shares = new_number_of_shares
-            if new_price is not None:
-                sell_order.price = new_price
-
-            session.commit()
-            return sell_order.asdict()
-
-    @validate_input(DELETE_SELL_ORDER_SCHEMA)
-    def delete_order(self, id, subject_id):
-        with session_scope() as session:
-            sell_order = session.query(self.SellOrder).filter_by(id=id).one()
-            if sell_order.user_id != subject_id:
-                raise UnauthorizedException("You need to own this order.")
-
-            session.delete(sell_order)
-        return {}
-
-
-class SecurityService:
-    def __init__(self, Security=Security):
-        self.Security = Security
-
-    def get_all(self):
-        with session_scope() as session:
-            return [sec.asdict() for sec in session.query(self.Security).all()]
-
-
 class LinkedinService:
     def __init__(self, User=User, UserService=UserService):
         self.User = User
@@ -216,3 +152,122 @@ class LinkedinService:
     @validate_input(LINKEDIN_MATCH_EMAILS_SCHEMA)
     def is_match(self, user_email, linkedin_email):
         return True if user_email == linkedin_email else False
+
+
+class SellOrderService:
+    def __init__(self, SellOrder=SellOrder, User=User):
+        self.SellOrder = SellOrder
+        self.User = User
+
+    @validate_input(CREATE_ORDER_SCHEMA)
+    def create_order(self, user_id, number_of_shares, price, security_id):
+        with session_scope() as session:
+            user = session.query(self.User).filter_by(id=user_id).one()
+            if not user.can_sell:
+                raise UnauthorizedException("This user cannot sell securities.")
+
+            sell_order = self.SellOrder(
+                user_id=user_id,
+                number_of_shares=number_of_shares,
+                price=price,
+                security_id=security_id,
+            )
+
+            session.add(sell_order)
+            session.commit()
+            return sell_order.asdict()
+
+    @validate_input({"user_id": UUID_RULE})
+    def get_orders_by_user(self, user_id):
+        with session_scope() as session:
+            sell_orders = session.query(self.SellOrder).filter_by(user_id=user_id).all()
+            return [sell_order.asdict() for sell_order in sell_orders]
+
+    @validate_input(EDIT_ORDER_SCHEMA)
+    def edit_order(self, id, subject_id, new_number_of_shares=None, new_price=None):
+        with session_scope() as session:
+            sell_order = session.query(self.SellOrder).filter_by(id=id).one()
+            if sell_order.user_id != subject_id:
+                raise UnauthorizedException("You need to own this order.")
+
+            if new_number_of_shares is not None:
+                sell_order.number_of_shares = new_number_of_shares
+            if new_price is not None:
+                sell_order.price = new_price
+
+            session.commit()
+            return sell_order.asdict()
+
+    @validate_input(DELETE_ORDER_SCHEMA)
+    def delete_order(self, id, subject_id):
+        with session_scope() as session:
+            sell_order = session.query(self.SellOrder).filter_by(id=id).one()
+            if sell_order.user_id != subject_id:
+                raise UnauthorizedException("You need to own this order.")
+
+            session.delete(sell_order)
+        return {}
+
+
+class BuyOrderService:
+    def __init__(self, BuyOrder=BuyOrder, User=User):
+        self.BuyOrder = BuyOrder
+        self.User = User
+
+    @validate_input(CREATE_ORDER_SCHEMA)
+    def create_order(self, user_id, number_of_shares, price, security_id):
+        with session_scope() as session:
+            user = session.query(self.User).filter_by(id=user_id).one()
+            if not user.can_buy:
+                raise UnauthorizedException("This user cannot buy securities.")
+
+            buy_order = self.BuyOrder(
+                user_id=user_id,
+                number_of_shares=number_of_shares,
+                price=price,
+                security_id=security_id,
+            )
+
+            session.add(buy_order)
+            session.commit()
+            return buy_order.asdict()
+
+    @validate_input({"user_id": UUID_RULE})
+    def get_orders_by_user(self, user_id):
+        with session_scope() as session:
+            buy_orders = session.query(self.BuyOrder).filter_by(user_id=user_id).all()
+            return [buy_order.asdict() for buy_order in buy_orders]
+
+    @validate_input(EDIT_ORDER_SCHEMA)
+    def edit_order(self, id, subject_id, new_number_of_shares=None, new_price=None):
+        with session_scope() as session:
+            buy_order = session.query(self.BuyOrder).filter_by(id=id).one()
+            if buy_order.user_id != subject_id:
+                raise UnauthorizedException("You need to own this order.")
+
+            if new_number_of_shares is not None:
+                buy_order.number_of_shares = new_number_of_shares
+            if new_price is not None:
+                buy_order.price = new_price
+
+            session.commit()
+            return buy_order.asdict()
+
+    @validate_input(DELETE_ORDER_SCHEMA)
+    def delete_order(self, id, subject_id):
+        with session_scope() as session:
+            buy_order = session.query(self.BuyOrder).filter_by(id=id).one()
+            if buy_order.user_id != subject_id:
+                raise UnauthorizedException("You need to own this order.")
+
+            session.delete(buy_order)
+        return {}
+
+
+class SecurityService:
+    def __init__(self, Security=Security):
+        self.Security = Security
+
+    def get_all(self):
+        with session_scope() as session:
+            return [sec.asdict() for sec in session.query(self.Security).all()]

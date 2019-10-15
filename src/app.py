@@ -10,13 +10,20 @@ from sanic_jwt import Responses
 from src.api import blueprint, user_login
 from src.config import APP_CONFIG
 from src.exceptions import AcquityException
-from src.services import LinkedinService, SecurityService, SellOrderService, UserService
+from src.services import (
+    BuyOrderService,
+    LinkedinService,
+    SecurityService,
+    SellOrderService,
+    UserService,
+)
 
 app = Sanic(load_env=False)
 app.config.update(APP_CONFIG)
 
 app.user_service = UserService()
 app.sell_order_service = SellOrderService()
+app.buy_order_service = BuyOrderService()
 app.security_service = SecurityService()
 app.linkedin_service = LinkedinService()
 

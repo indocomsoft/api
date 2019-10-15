@@ -39,19 +39,19 @@ CREATE_USER_SCHEMA = {
     "password": {"type": "string", "minlength": 6},
 }
 INVITE_SCHEMA = {"inviter_id": UUID_RULE, "invited_id": UUID_RULE}
-CREATE_SELL_ORDER_SCHEMA = {
+CREATE_ORDER_SCHEMA = {
     "user_id": UUID_RULE,
     "number_of_shares": NONNEGATIVE_NUMBER_RULE,
     "price": NONNEGATIVE_NUMBER_RULE,
     "security_id": UUID_RULE,
 }
-EDIT_SELL_ORDER_SCHEMA = {
+EDIT_ORDER_SCHEMA = {
     "id": UUID_RULE,
     "subject_id": UUID_RULE,
     "new_number_of_shares": OPTIONAL_NONNEGATIVE_NUMBER_RULE,
     "new_price": OPTIONAL_NONNEGATIVE_NUMBER_RULE,
 }
-DELETE_SELL_ORDER_SCHEMA = {"id": UUID_RULE, "subject_id": UUID_RULE}
+DELETE_ORDER_SCHEMA = {"id": UUID_RULE, "subject_id": UUID_RULE}
 
 LINKEDIN_CODE_SCHEMA = {
     "code": {"type": "string", "required": True},
