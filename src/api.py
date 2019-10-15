@@ -43,6 +43,16 @@ async def create_invite(request, user):
     )
 
 
+@blueprint.post("/user/linkedin/")
+@auth_required
+async def create_user_linkedin(request, user):
+    return json(
+        request.app.linkedin_service.activate_buyer_privileges(
+            **request.json, user_email=user.get("email")
+        )
+    )
+
+
 @blueprint.get("/sell_order/")
 @auth_required
 async def get_sell_orders_by_user(request, user):
@@ -116,16 +126,15 @@ async def delete_buy_order(request, user, id):
 
 
 @blueprint.get("/security/")
-@protected(blueprint)
 async def get_all_securities(request):
     return json(request.app.security_service.get_all())
 
 
-@blueprint.post("/user/linkedin/")
-@auth_required
-async def create_user_linkedin(request, user):
-    return json(
-        request.app.linkedin_service.activate_buyer_privileges(
-            **request.json, user_email=user.get("email")
-        )
-    )
+@blueprint.get("/round/")
+async def get_all_rounds(request):
+    return json(request.app.round_service.get_all())
+
+
+@blueprint.get("/round/active")
+async def get_active_round(request):
+    return json(request.app.round_service.get_active())

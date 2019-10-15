@@ -1,3 +1,4 @@
+from datetime import timedelta
 from os import getenv
 
 from dotenv import load_dotenv
@@ -23,4 +24,7 @@ APP_CONFIG = {
     ),
     "CLIENT_ID": getenv("CLIENT_ID"),
     "CLIENT_SECRET": getenv("CLIENT_SECRET"),
+    "ACQUITY_ROUND_START_NUMBER_OF_SELLERS_CUTOFF": 2,
+    "ACQUITY_ROUND_START_TOTAL_SELL_SHARES_CUTOFF": 1000,
+    "ACQUITY_ROUND_LENGTH": timedelta(weeks=1),
 }

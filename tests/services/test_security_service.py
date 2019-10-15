@@ -1,10 +1,8 @@
-import pytest
-
+from src.config import APP_CONFIG
 from src.database import Security, session_scope
 from src.services import SecurityService
-from tests.utils import assert_dict_in
 
-security_service = SecurityService(Security=Security)
+security_service = SecurityService(config=APP_CONFIG, Security=Security)
 
 
 def test_get_all():

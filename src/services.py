@@ -1,11 +1,15 @@
-import datetime
+from datetime import datetime
 
 import requests
 from passlib.hash import argon2
+from sqlalchemy.sql import func
 
-from src.config import APP_CONFIG
-from src.database import BuyOrder, Security, SellOrder, User, session_scope
-from src.exceptions import InvalidRequestException, UnauthorizedException
+from src.database import BuyOrder, Round, Security, SellOrder, User, session_scope
+from src.exceptions import (
+    InvalidRequestException,
+    NoActiveRoundException,
+    UnauthorizedException,
+)
 from src.schemata import (
     CREATE_ORDER_SCHEMA,
     CREATE_USER_SCHEMA,
@@ -15,7 +19,6 @@ from src.schemata import (
     INVITE_SCHEMA,
     LINKEDIN_BUYER_PRIVILEGES_SCHEMA,
     LINKEDIN_CODE_SCHEMA,
-    LINKEDIN_MATCH_EMAILS_SCHEMA,
     LINKEDIN_TOKEN_SCHEMA,
     USER_AUTH_SCHEMA,
     UUID_RULE,
@@ -23,8 +26,14 @@ from src.schemata import (
 )
 
 
-class UserService:
-    def __init__(self, User=User, hasher=argon2):
+class DefaultService:
+    def __init__(self, config):
+        self.config = config
+
+
+class UserService(DefaultService):
+    def __init__(self, config, User=User, hasher=argon2):
+        super().__init__(config)
         self.User = User
         self.hasher = hasher
 
@@ -96,28 +105,28 @@ class UserService:
         return user
 
 
-class LinkedinService:
-    def __init__(self, User=User, UserService=UserService):
-        self.User = User
-        self.UserService = UserService
+class LinkedinService(DefaultService):
+    def __init__(self, config):
+        super().__init__(config)
 
     @validate_input(LINKEDIN_BUYER_PRIVILEGES_SCHEMA)
     def activate_buyer_privileges(self, code, redirect_uri, user_email):
-        linkedin_email = self.get_user_data(code=code, redirect_uri=redirect_uri)
-        is_email = self.is_match(linkedin_email=linkedin_email, user_email=user_email)
-        if is_email:
-            user = self.UserService().get_user_by_email(email=user_email)
-            return self.UserService().activate_buy_privileges(user_id=user.get("id"))
+        linkedin_email = self._get_user_data(code=code, redirect_uri=redirect_uri)
+        if linkedin_email == user_email:
+            user = UserService(self.config).get_user_by_email(email=user_email)
+            return UserService(self.config).activate_buy_privileges(
+                user_id=user.get("id")
+            )
         else:
             raise InvalidRequestException("Linkedin email does not match")
 
     @validate_input(LINKEDIN_CODE_SCHEMA)
-    def get_user_data(self, code, redirect_uri):
-        token = self.get_token(code=code, redirect_uri=redirect_uri)
-        return self.get_user_email(token=token)
+    def _get_user_data(self, code, redirect_uri):
+        token = self._get_token(code=code, redirect_uri=redirect_uri)
+        return self._get_user_email(token=token)
 
     @validate_input(LINKEDIN_CODE_SCHEMA)
-    def get_token(self, code, redirect_uri):
+    def _get_token(self, code, redirect_uri):
         token = requests.post(
             "https://www.linkedin.com/oauth/v2/accessToken",
             headers={"Content-Type": "x-www-form-urlencoded"},
@@ -125,39 +134,27 @@ class LinkedinService:
                 "grant_type": "authorization_code",
                 "code": code,
                 "redirect_uri": redirect_uri,
-                "client_id": APP_CONFIG.get("CLIENT_ID"),
-                "client_secret": APP_CONFIG.get("CLIENT_SECRET"),
+                "client_id": self.config["CLIENT_ID"],
+                "client_secret": self.config["CLIENT_SECRET"],
             },
         ).json()
         return token.get("access_token")
 
     @validate_input(LINKEDIN_TOKEN_SCHEMA)
-    def get_user_profile(self, token):
-        user_profile = requests.get(
-            "https://api.linkedin.com/v2/me",
-            headers={"Authorization": f"Bearer {token}"},
-        ).json()
-        first_name = user_profile.get("localizedFirstName")
-        last_name = user_profile.get("localizedLastName")
-        return {"full_name": f"{first_name} {last_name}"}
-
-    @validate_input(LINKEDIN_TOKEN_SCHEMA)
-    def get_user_email(self, token):
+    def _get_user_email(self, token):
         email = requests.get(
             "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))",
             headers={"Authorization": f"Bearer {token}"},
         ).json()
         return email.get("elements")[0].get("handle~").get("emailAddress")
 
-    @validate_input(LINKEDIN_MATCH_EMAILS_SCHEMA)
-    def is_match(self, user_email, linkedin_email):
-        return True if user_email == linkedin_email else False
 
-
-class SellOrderService:
-    def __init__(self, SellOrder=SellOrder, User=User):
+class SellOrderService(DefaultService):
+    def __init__(self, config, SellOrder=SellOrder, User=User, Round=Round):
+        super().__init__(config)
         self.SellOrder = SellOrder
         self.User = User
+        self.Round = Round
 
     @validate_input(CREATE_ORDER_SCHEMA)
     def create_order(self, user_id, number_of_shares, price, security_id):
@@ -173,7 +170,16 @@ class SellOrderService:
                 security_id=security_id,
             )
 
-            session.add(sell_order)
+            active_round = RoundService(self.config).get_active()
+            if active_round is None:
+                session.add(sell_order)
+                session.commit()
+                if RoundService(self.config).should_round_start():
+                    self._set_orders_to_new_round()
+            else:
+                sell_order.round_id = active_round["id"]
+                session.add(sell_order)
+
             session.commit()
             return sell_order.asdict()
 
@@ -208,9 +214,22 @@ class SellOrderService:
             session.delete(sell_order)
         return {}
 
+    def _set_orders_to_new_round(self):
+        with session_scope() as session:
+            new_round = self.Round(
+                end_time=datetime.now() + self.config["ACQUITY_ROUND_LENGTH"],
+                is_concluded=False,
+            )
+            session.add(new_round)
+            session.flush()
 
-class BuyOrderService:
-    def __init__(self, BuyOrder=BuyOrder, User=User):
+            for sell_order in session.query(self.SellOrder).filter_by(round_id=None):
+                sell_order.round_id = str(new_round.id)
+
+
+class BuyOrderService(DefaultService):
+    def __init__(self, config, BuyOrder=BuyOrder, User=User):
+        super().__init__(config)
         self.BuyOrder = BuyOrder
         self.User = User
 
@@ -221,11 +240,18 @@ class BuyOrderService:
             if not user.can_buy:
                 raise UnauthorizedException("This user cannot buy securities.")
 
+            active_round = RoundService(self.config).get_active()
+            if active_round is None:
+                raise NoActiveRoundException(
+                    "There is no active round to associate this buy order with."
+                )
+
             buy_order = self.BuyOrder(
                 user_id=user_id,
                 number_of_shares=number_of_shares,
                 price=price,
                 security_id=security_id,
+                round_id=active_round["id"],
             )
 
             session.add(buy_order)
@@ -264,10 +290,59 @@ class BuyOrderService:
         return {}
 
 
-class SecurityService:
-    def __init__(self, Security=Security):
+class SecurityService(DefaultService):
+    def __init__(self, config, Security=Security):
+        super().__init__(config)
         self.Security = Security
 
     def get_all(self):
         with session_scope() as session:
             return [sec.asdict() for sec in session.query(self.Security).all()]
+
+
+class RoundService(DefaultService):
+    def __init__(self, config, Round=Round, SellOrder=SellOrder):
+        super().__init__(config)
+        self.Round = Round
+        self.SellOrder = SellOrder
+
+    def get_all(self):
+        with session_scope() as session:
+            return [r.asdict() for r in session.query(self.Round).all()]
+
+    def get_active(self):
+        with session_scope() as session:
+            active_round = (
+                session.query(self.Round)
+                .filter(
+                    self.Round.end_time >= datetime.now(),
+                    self.Round.is_concluded == False,
+                )
+                .one_or_none()
+            )
+            return active_round and active_round.asdict()
+
+    def should_round_start(self):
+        with session_scope() as session:
+            unique_sellers = (
+                session.query(self.SellOrder.user_id)
+                .filter_by(round_id=None)
+                .distinct()
+                .count()
+            )
+            if (
+                unique_sellers
+                >= self.config["ACQUITY_ROUND_START_NUMBER_OF_SELLERS_CUTOFF"]
+            ):
+                return True
+
+            total_shares = (
+                session.query(func.sum(self.SellOrder.number_of_shares))
+                .filter_by(round_id=None)
+                .scalar()
+                or 0
+            )
+            return (
+                total_shares
+                >= self.config["ACQUITY_ROUND_START_TOTAL_SELL_SHARES_CUTOFF"]
+            )

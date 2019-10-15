@@ -1,15 +1,14 @@
-import datetime
-
 import pytest
 from passlib.hash import plaintext
 from sqlalchemy.orm.exc import NoResultFound
 
+from src.config import APP_CONFIG
 from src.database import User, session_scope
 from src.exceptions import UnauthorizedException
 from src.services import UserService
 from tests.utils import assert_dict_in
 
-user_service = UserService(User=User, hasher=plaintext)
+user_service = UserService(config=APP_CONFIG, User=User, hasher=plaintext)
 
 
 def test_create():

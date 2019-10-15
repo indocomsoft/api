@@ -15,3 +15,7 @@ class InvalidRequestException(AcquityException):
 
 class UnauthorizedException(AcquityException):
     status_code = 403
+
+
+class NoActiveRoundException(AcquityException):
+    status_code = 400

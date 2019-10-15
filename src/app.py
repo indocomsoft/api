@@ -1,6 +1,6 @@
 import traceback
 
-from sanic import Blueprint, Sanic
+from sanic import Sanic
 from sanic.exceptions import SanicException
 from sanic.response import json
 from sanic_cors.extension import CORS as initialize_cors
@@ -13,6 +13,7 @@ from src.exceptions import AcquityException
 from src.services import (
     BuyOrderService,
     LinkedinService,
+    RoundService,
     SecurityService,
     SellOrderService,
     UserService,
@@ -21,11 +22,12 @@ from src.services import (
 app = Sanic(load_env=False)
 app.config.update(APP_CONFIG)
 
-app.user_service = UserService()
-app.sell_order_service = SellOrderService()
-app.buy_order_service = BuyOrderService()
-app.security_service = SecurityService()
-app.linkedin_service = LinkedinService()
+app.user_service = UserService(app.config)
+app.linkedin_service = LinkedinService(app.config)
+app.sell_order_service = SellOrderService(app.config)
+app.buy_order_service = BuyOrderService(app.config)
+app.security_service = SecurityService(app.config)
+app.round_service = RoundService(app.config)
 
 initialize_cors(app)
 

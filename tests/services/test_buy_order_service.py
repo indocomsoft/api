@@ -1,13 +1,15 @@
-import datetime
+from datetime import datetime, timedelta
+from unittest.mock import patch
 
 import pytest
 
-from src.database import BuyOrder, Security, User, session_scope
-from src.exceptions import UnauthorizedException
+from src.config import APP_CONFIG
+from src.database import BuyOrder, Round, Security, User, session_scope
+from src.exceptions import NoActiveRoundException, UnauthorizedException
 from src.services import BuyOrderService
 from tests.utils import assert_dict_in
 
-buy_order_service = BuyOrderService(BuyOrder=BuyOrder)
+buy_order_service = BuyOrderService(config=APP_CONFIG, BuyOrder=BuyOrder, User=User)
 
 
 def test_get_orders_by_user():
@@ -20,22 +22,26 @@ def test_get_orders_by_user():
             full_name="Ben",
         )
         security = Security(name="Grab")
-        session.add_all([user, security])
+        round = Round(end_time=datetime.now(), is_concluded=False)
+        session.add_all([user, security, round])
         session.commit()
 
         user_id = str(user.id)
         security_id = str(security.id)
+        round_id = str(round.id)
         buy_order_params = {
             "user_id": user_id,
             "number_of_shares": 20,
             "price": 30,
             "security_id": security_id,
+            "round_id": round_id,
         }
         buy_order_params_2 = {
             "user_id": user_id,
             "number_of_shares": 40,
             "price": 50,
             "security_id": security_id,
+            "round_id": round_id,
         }
 
         buy_order = BuyOrder(**buy_order_params)
@@ -62,6 +68,42 @@ def test_create_order__authorized():
             full_name="Ben",
         )
         security = Security(name="Grab")
+        round = Round(end_time=datetime.now(), is_concluded=False)
+        session.add_all([user, security, round])
+        session.commit()
+
+        round_dict = round.asdict()
+        user_id = str(user.id)
+        security_id = str(security.id)
+        round_id = str(round.id)
+
+    buy_order_params = {
+        "user_id": user_id,
+        "number_of_shares": 20,
+        "price": 30,
+        "security_id": security_id,
+    }
+
+    with patch("src.services.RoundService.get_active", return_value=round_dict):
+        buy_order_id = buy_order_service.create_order(**buy_order_params)["id"]
+
+    with session_scope() as session:
+        buy_order = session.query(BuyOrder).filter_by(id=buy_order_id).one().asdict()
+
+    buy_order_params["round_id"] = round_id
+    assert_dict_in(buy_order_params, buy_order)
+
+
+def test_create_order__authorized_no_active_rounds():
+    with session_scope() as session:
+        user = User(
+            can_sell=False,
+            can_buy=True,
+            email="a@a",
+            hashed_password="123456",
+            full_name="Ben",
+        )
+        security = Security(name="Grab")
         session.add_all([user, security])
         session.commit()
 
@@ -74,11 +116,11 @@ def test_create_order__authorized():
         "price": 30,
         "security_id": security_id,
     }
-    buy_order_id = buy_order_service.create_order(**buy_order_params)["id"]
 
-    with session_scope() as session:
-        buy_order = session.query(BuyOrder).filter_by(id=buy_order_id).one().asdict()
-    assert_dict_in(buy_order_params, buy_order)
+    with patch(
+        "src.services.RoundService.get_active", return_value=None
+    ), pytest.raises(NoActiveRoundException):
+        buy_order_id = buy_order_service.create_order(**buy_order_params)["id"]
 
 
 def test_create_order__unauthorized():
@@ -91,7 +133,8 @@ def test_create_order__unauthorized():
             full_name="Ben",
         )
         security = Security(name="Grab")
-        session.add_all([user, security])
+        round = Round(end_time=datetime.now() + timedelta(weeks=1), is_concluded=False)
+        session.add_all([user, security, round])
         session.commit()
 
         user_id = str(user.id)
@@ -113,16 +156,19 @@ def test_edit_order():
             full_name="Ben",
         )
         security = Security(name="Grab")
-        session.add_all([user, security])
+        round = Round(end_time=datetime.now(), is_concluded=False)
+        session.add_all([user, security, round])
         session.commit()
 
         user_id = str(user.id)
         security_id = str(security.id)
+        round_id = str(round.id)
         buy_order_params = {
             "user_id": user_id,
             "number_of_shares": 20,
             "price": 30,
             "security_id": security_id,
+            "round_id": round_id,
         }
 
         buy_order = BuyOrder(**buy_order_params)
@@ -140,9 +186,7 @@ def test_edit_order():
             session.query(BuyOrder).filter_by(id=buy_order_id).one().asdict()
         )
 
-    new_buy_order_params = buy_order_params
-    new_buy_order_params["number_of_shares"] = 50
-    assert_dict_in(new_buy_order_params, new_buy_order)
+    assert_dict_in({**buy_order_params, "number_of_shares": 50}, new_buy_order)
 
 
 def test_delete_order():
@@ -155,16 +199,19 @@ def test_delete_order():
             full_name="Ben",
         )
         security = Security(name="Grab")
-        session.add_all([user, security])
+        round = Round(end_time=datetime.now(), is_concluded=False)
+        session.add_all([user, security, round])
         session.commit()
 
         user_id = str(user.id)
         security_id = str(security.id)
+        round_id = str(round.id)
         buy_order_params = {
             "user_id": user_id,
             "number_of_shares": 20,
             "price": 30,
             "security_id": security_id,
+            "round_id": round_id,
         }
 
         buy_order = BuyOrder(**buy_order_params)

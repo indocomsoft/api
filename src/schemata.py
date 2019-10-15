@@ -1,4 +1,3 @@
-import json
 from functools import wraps
 
 from cerberus import Validator
@@ -58,10 +57,6 @@ LINKEDIN_CODE_SCHEMA = {
     "redirect_uri": {"type": "string", "required": True},
 }
 LINKEDIN_TOKEN_SCHEMA = {"token": {"type": "string", "required": True}}
-LINKEDIN_MATCH_EMAILS_SCHEMA = {
-    "user_email": {"type": "string", "required": True},
-    "linkedin_email": {"type": "string", "required": True},
-}
 LINKEDIN_BUYER_PRIVILEGES_SCHEMA = {
     "code": {"type": "string", "required": True},
     "redirect_uri": {"type": "string", "required": True},
