@@ -88,7 +88,7 @@ def test_create_order__authorized():
         buy_order_id = buy_order_service.create_order(**buy_order_params)["id"]
 
     with session_scope() as session:
-        buy_order = session.query(BuyOrder).filter_by(id=buy_order_id).one().asdict()
+        buy_order = session.query(BuyOrder).get(buy_order_id).asdict()
 
     buy_order_params["round_id"] = round_id
     assert_dict_in(buy_order_params, buy_order)
@@ -182,9 +182,7 @@ def test_edit_order():
     )
 
     with session_scope() as session:
-        new_buy_order = (
-            session.query(BuyOrder).filter_by(id=buy_order_id).one().asdict()
-        )
+        new_buy_order = session.query(BuyOrder).get(buy_order_id).asdict()
 
     assert_dict_in({**buy_order_params, "number_of_shares": 50}, new_buy_order)
 

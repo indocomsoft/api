@@ -97,7 +97,7 @@ def test_invite_to_be_seller__authorized():
     user_service.invite_to_be_seller(inviter_id=inviter_id, invited_id=invited_id)
 
     with session_scope() as session:
-        assert session.query(User).filter_by(id=invited_id).one().can_sell
+        assert session.query(User).get(invited_id).can_sell
 
 
 def test_get_user():

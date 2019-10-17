@@ -82,7 +82,7 @@ def test_create_order__authorized():
         sell_order_id = sell_order_service.create_order(**sell_order_params)["id"]
 
     with session_scope() as session:
-        sell_order = session.query(SellOrder).filter_by(id=sell_order_id).one().asdict()
+        sell_order = session.query(SellOrder).get(sell_order_id).asdict()
 
     assert_dict_in({**sell_order_params, "round_id": None}, sell_order)
 
@@ -120,10 +120,8 @@ def test_create_order__add_new_round():
         sell_order_id2 = sell_order_service.create_order(**sell_order_params)["id"]
 
     with session_scope() as session:
-        sell_order = session.query(SellOrder).filter_by(id=sell_order_id).one().asdict()
-        sell_order2 = (
-            session.query(SellOrder).filter_by(id=sell_order_id2).one().asdict()
-        )
+        sell_order = session.query(SellOrder).get(sell_order_id).asdict()
+        sell_order2 = session.query(SellOrder).get(sell_order_id2).asdict()
 
     assert_dict_in(sell_order_params, sell_order)
     assert sell_order["round_id"] is not None
@@ -186,9 +184,7 @@ def test_edit_order():
     )
 
     with session_scope() as session:
-        new_sell_order = (
-            session.query(SellOrder).filter_by(id=sell_order_id).one().asdict()
-        )
+        new_sell_order = session.query(SellOrder).get(sell_order_id).asdict()
 
     assert_dict_in({**sell_order_params, "number_of_shares": 50}, new_sell_order)
 

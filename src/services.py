@@ -2,6 +2,7 @@ from datetime import datetime
 
 import requests
 from passlib.hash import argon2
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
 
 from src.database import (
@@ -67,7 +68,7 @@ class UserService(DefaultService):
     @validate_input({"user_id": UUID_RULE})
     def activate_buy_privileges(self, user_id):
         with session_scope() as session:
-            user = session.query(self.User).filter_by(id=user_id).one()
+            user = session.query(self.User).get(user_id)
             user.can_buy = True
             session.commit()
             result = user.asdict()
@@ -77,11 +78,11 @@ class UserService(DefaultService):
     @validate_input(INVITE_SCHEMA)
     def invite_to_be_seller(self, inviter_id, invited_id):
         with session_scope() as session:
-            inviter = session.query(self.User).filter_by(id=inviter_id).one()
+            inviter = session.query(self.User).get(inviter_id)
             if not inviter.can_sell:
                 raise UnauthorizedException("Inviter is not a previous seller.")
 
-            invited = session.query(self.User).filter_by(id=invited_id).one()
+            invited = session.query(self.User).get(invited_id)
             invited.can_sell = True
 
             session.commit()
@@ -102,9 +103,12 @@ class UserService(DefaultService):
     @validate_input({"id": UUID_RULE})
     def get_user(self, id):
         with session_scope() as session:
-            user = session.query(self.User).filter_by(id=id).one().asdict()
-        user.pop("hashed_password")
-        return user
+            user = session.query(self.User).get(id)
+            if user is None:
+                raise NoResultFound
+            user_dict = user.asdict()
+        user_dict.pop("hashed_password")
+        return user_dict
 
     @validate_input({"email": EMAIL_RULE})
     def get_user_by_email(self, email):
@@ -168,7 +172,7 @@ class SellOrderService(DefaultService):
     @validate_input(CREATE_ORDER_SCHEMA)
     def create_order(self, user_id, number_of_shares, price, security_id):
         with session_scope() as session:
-            user = session.query(self.User).filter_by(id=user_id).one()
+            user = session.query(self.User).get(user_id)
             if not user.can_sell:
                 raise UnauthorizedException("This user cannot sell securities.")
 
@@ -201,7 +205,7 @@ class SellOrderService(DefaultService):
     @validate_input(EDIT_ORDER_SCHEMA)
     def edit_order(self, id, subject_id, new_number_of_shares=None, new_price=None):
         with session_scope() as session:
-            sell_order = session.query(self.SellOrder).filter_by(id=id).one()
+            sell_order = session.query(self.SellOrder).get(id)
             if sell_order.user_id != subject_id:
                 raise UnauthorizedException("You need to own this order.")
 
@@ -216,7 +220,7 @@ class SellOrderService(DefaultService):
     @validate_input(DELETE_ORDER_SCHEMA)
     def delete_order(self, id, subject_id):
         with session_scope() as session:
-            sell_order = session.query(self.SellOrder).filter_by(id=id).one()
+            sell_order = session.query(self.SellOrder).get(id)
             if sell_order.user_id != subject_id:
                 raise UnauthorizedException("You need to own this order.")
 
@@ -245,7 +249,7 @@ class BuyOrderService(DefaultService):
     @validate_input(CREATE_ORDER_SCHEMA)
     def create_order(self, user_id, number_of_shares, price, security_id):
         with session_scope() as session:
-            user = session.query(self.User).filter_by(id=user_id).one()
+            user = session.query(self.User).get(user_id)
             if not user.can_buy:
                 raise UnauthorizedException("This user cannot buy securities.")
 
@@ -276,7 +280,7 @@ class BuyOrderService(DefaultService):
     @validate_input(EDIT_ORDER_SCHEMA)
     def edit_order(self, id, subject_id, new_number_of_shares=None, new_price=None):
         with session_scope() as session:
-            buy_order = session.query(self.BuyOrder).filter_by(id=id).one()
+            buy_order = session.query(self.BuyOrder).get(id)
             if buy_order.user_id != subject_id:
                 raise UnauthorizedException("You need to own this order.")
 
@@ -291,7 +295,7 @@ class BuyOrderService(DefaultService):
     @validate_input(DELETE_ORDER_SCHEMA)
     def delete_order(self, id, subject_id):
         with session_scope() as session:
-            buy_order = session.query(self.BuyOrder).filter_by(id=id).one()
+            buy_order = session.query(self.BuyOrder).get(id)
             if buy_order.user_id != subject_id:
                 raise UnauthorizedException("You need to own this order.")
 
