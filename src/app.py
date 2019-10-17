@@ -13,6 +13,7 @@ from src.exceptions import AcquityException
 from src.services import (
     BuyOrderService,
     LinkedinService,
+    MatchService,
     RoundService,
     SecurityService,
     SellOrderService,
@@ -28,6 +29,7 @@ app.sell_order_service = SellOrderService(app.config)
 app.buy_order_service = BuyOrderService(app.config)
 app.security_service = SecurityService(app.config)
 app.round_service = RoundService(app.config)
+app.match_service = MatchService(app.config)
 
 initialize_cors(app)
 

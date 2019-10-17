@@ -4,12 +4,21 @@ import requests
 from passlib.hash import argon2
 from sqlalchemy.sql import func
 
-from src.database import BuyOrder, Round, Security, SellOrder, User, session_scope
+from src.database import (
+    BuyOrder,
+    Match,
+    Round,
+    Security,
+    SellOrder,
+    User,
+    session_scope,
+)
 from src.exceptions import (
     InvalidRequestException,
     NoActiveRoundException,
     UnauthorizedException,
 )
+from src.match import match_buyers_and_sellers
 from src.schemata import (
     CREATE_ORDER_SCHEMA,
     CREATE_USER_SCHEMA,
@@ -346,3 +355,37 @@ class RoundService(DefaultService):
                 total_shares
                 >= self.config["ACQUITY_ROUND_START_TOTAL_SELL_SHARES_CUTOFF"]
             )
+
+
+class MatchService(DefaultService):
+    def __init__(self, config, BuyOrder=BuyOrder, SellOrder=SellOrder, Match=Match):
+        super().__init__(config)
+        self.BuyOrder = BuyOrder
+        self.SellOrder = SellOrder
+        self.Match = Match
+
+    def run_matches(self):
+        round_id = RoundService(self.config).get_active()["id"]
+
+        with session_scope() as session:
+            buy_orders = [
+                b.asdict()
+                for b in session.query(self.BuyOrder).filter_by(round_id=round_id).all()
+            ]
+            sell_orders = [
+                s.asdict()
+                for s in session.query(self.SellOrder)
+                .filter_by(round_id=round_id)
+                .all()
+            ]
+
+        match_results = match_buyers_and_sellers(buy_orders, sell_orders, [])
+
+        with session_scope() as session:
+            for buy_order_id, sell_order_id in match_results:
+                match = self.Match(
+                    buy_order_id=buy_order_id, sell_order_id=sell_order_id
+                )
+                session.add(match)
+
+            session.query(Round).get(round_id).is_concluded = True

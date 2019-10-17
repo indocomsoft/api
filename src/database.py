@@ -100,8 +100,8 @@ class Match(Base):
 
     buy_order_id = Column(UUID, ForeignKey("buy_orders.id"), nullable=False)
     sell_order_id = Column(UUID, ForeignKey("sell_orders.id"), nullable=False)
-    number_of_shares = Column(Float, nullable=False)
-    price = Column(Float, nullable=False)
+    number_of_shares = Column(Float)
+    price = Column(Float)
 
     buy_order = relationship("BuyOrder", back_populates="matches")
     sell_order = relationship("SellOrder", back_populates="matches")
