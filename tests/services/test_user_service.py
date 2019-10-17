@@ -6,6 +6,7 @@ from src.config import APP_CONFIG
 from src.database import User, session_scope
 from src.exceptions import UnauthorizedException
 from src.services import UserService
+from tests.fixtures import attributes_for_user, create_user
 from tests.utils import assert_dict_in
 
 user_service = UserService(config=APP_CONFIG, User=User, hasher=plaintext)
@@ -31,68 +32,25 @@ def test_create():
 
 
 def test_authenticate():
-    user_params = {
-        "email": "a@a",
-        "hashed_password": "123456",
-        "full_name": "Ben",
-        "can_buy": False,
-        "can_sell": False,
-    }
-    with session_scope() as session:
-        user = User(**user_params)
-        session.add(user)
+    user_params = create_user()
 
-    user = user_service.authenticate(email="a@a", password="123456")
-    assert_dict_in(user_params, user)
+    user = user_service.authenticate(
+        email=user_params["email"], password=user_params["hashed_password"]
+    )
+    assert user_params == user
 
 
 def test_invite_to_be_seller__unauthorized():
-    with session_scope() as session:
-        inviter = User(
-            email="a@a",
-            hashed_password="123456",
-            full_name="Ben",
-            can_buy=False,
-            can_sell=False,
-        )
-        invited = User(
-            email="b@b",
-            hashed_password="123456",
-            full_name="Ben",
-            can_buy=False,
-            can_sell=False,
-        )
-        session.add_all([inviter, invited])
-        session.commit()
-
-        inviter_id = str(inviter.id)
-        invited_id = str(invited.id)
+    inviter_id = create_user("1", can_sell=False)["id"]
+    invited_id = create_user("2")["id"]
 
     with pytest.raises(UnauthorizedException):
         user_service.invite_to_be_seller(inviter_id=inviter_id, invited_id=invited_id)
 
 
 def test_invite_to_be_seller__authorized():
-    with session_scope() as session:
-        inviter = User(
-            email="a@a",
-            hashed_password="123456",
-            full_name="Ben",
-            can_buy=False,
-            can_sell=True,
-        )
-        invited = User(
-            email="b@b",
-            hashed_password="123456",
-            full_name="Ben",
-            can_buy=False,
-            can_sell=False,
-        )
-        session.add_all([inviter, invited])
-        session.commit()
-
-        inviter_id = str(inviter.id)
-        invited_id = str(invited.id)
+    inviter_id = create_user("1", can_sell=True)["id"]
+    invited_id = create_user("2")["id"]
 
     user_service.invite_to_be_seller(inviter_id=inviter_id, invited_id=invited_id)
 
@@ -101,22 +59,16 @@ def test_invite_to_be_seller__authorized():
 
 
 def test_get_user():
-    with session_scope() as session:
-        user = User(
-            email="a@a",
-            hashed_password="123456",
-            full_name="Ben",
-            can_buy=False,
-            can_sell=False,
-        )
-        session.add(user)
+    user_params = create_user()
 
-    user_id = user_service.authenticate(email="a@a", password="123456")["id"]
+    user_id = user_service.authenticate(
+        email=user_params["email"], password=user_params["hashed_password"]
+    )["id"]
 
     user = user_service.get_user(id=user_id)
-    assert_dict_in(
-        {"email": "a@a", "full_name": "Ben", "can_buy": False, "can_sell": False}, user
-    )
+
+    user_params.pop("hashed_password")
+    assert user_params == user
 
     with pytest.raises(NoResultFound):
         user_service.get_user(id="00000000-0000-0000-0000-000000000000")

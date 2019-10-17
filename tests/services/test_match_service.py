@@ -12,6 +12,7 @@ from src.database import (
     session_scope,
 )
 from src.services import MatchService
+from tests.fixtures import create_buy_order, create_round, create_sell_order
 
 match_service = MatchService(
     config=APP_CONFIG, BuyOrder=BuyOrder, SellOrder=SellOrder, Match=Match
@@ -19,63 +20,17 @@ match_service = MatchService(
 
 
 def test_run_matches():
-    with session_scope() as session:
-        user = User(
-            can_sell=False,
-            can_buy=True,
-            email="a@a",
-            hashed_password="123456",
-            full_name="Ben",
-        )
-        security = Security(name="Grab")
-        round = Round(end_time=datetime.now(), is_concluded=False)
-        session.add_all([user, security, round])
-        session.commit()
+    round = create_round()
 
-        user_id = str(user.id)
-        security_id = str(security.id)
-        round_id = str(round.id)
-
-        buy_order = BuyOrder(
-            user_id=user_id,
-            number_of_shares=20,
-            price=30,
-            security_id=security_id,
-            round_id=round_id,
-        )
-        buy_order_2 = BuyOrder(
-            user_id=user_id,
-            number_of_shares=40,
-            price=50,
-            security_id=security_id,
-            round_id=round_id,
-        )
-        sell_order = SellOrder(
-            user_id=user_id,
-            number_of_shares=20,
-            price=30,
-            security_id=security_id,
-            round_id=round_id,
-        )
-        sell_order_2 = SellOrder(
-            user_id=user_id,
-            number_of_shares=40,
-            price=50,
-            security_id=security_id,
-            round_id=round_id,
-        )
-
-        session.add_all([buy_order, buy_order_2, sell_order, sell_order_2])
-        session.commit()
-
-        buy_order_id = str(buy_order.id)
-        sell_order_id = str(sell_order.id)
-        round_dict = round.asdict()
+    buy_order_id = create_buy_order("1", round_id=round["id"])["id"]
+    create_buy_order("2", round_id=round["id"])
+    sell_order_id = create_sell_order("3", round_id=round["id"])["id"]
+    create_sell_order("4", round_id=round["id"])
 
     with patch(
         "src.services.match_buyers_and_sellers",
         return_value=[(buy_order_id, sell_order_id)],
-    ), patch("src.services.RoundService.get_active", return_value=round_dict):
+    ), patch("src.services.RoundService.get_active", return_value=round):
         match_service.run_matches()
 
     with session_scope() as session:
@@ -83,4 +38,4 @@ def test_run_matches():
         assert match.buy_order_id == buy_order_id
         assert match.sell_order_id == sell_order_id
 
-        assert session.query(Round).get(round_dict["id"]).is_concluded
+        assert session.query(Round).get(round["id"]).is_concluded
