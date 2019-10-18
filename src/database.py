@@ -29,6 +29,10 @@ class Base(_base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
+    @property
+    def additional_things_to_dict(self):
+        return {}
+
     def asdict(self):
         d = {}
         columns = self.__table__.columns.keys()
@@ -40,6 +44,10 @@ class Base(_base):
                 d[col] = str(item)
             else:
                 d[col] = item
+
+        for key, value in self.additional_things_to_dict.items():
+            d[key] = value
+
         return d
 
 
@@ -74,9 +82,13 @@ class SellOrder(Base):
     price = Column(Float, nullable=False)
     round_id = Column(UUID, ForeignKey("rounds.id"))
 
+    @property
+    def additional_things_to_dict(self):
+        return {"security_name": self.security.name}
+
     user = relationship("User", back_populates="sell_orders")
     matches = relationship("Match", back_populates="sell_order")
-    security = relationship("Security", back_populates="sell_orders")
+    security = relationship("Security", back_populates="sell_orders", lazy="joined")
     round = relationship("Round", back_populates="sell_orders")
 
 
@@ -89,9 +101,13 @@ class BuyOrder(Base):
     price = Column(Float, nullable=False)
     round_id = Column(UUID, ForeignKey("rounds.id"), nullable=False)
 
+    @property
+    def additional_things_to_dict(self):
+        return {"security_name": self.security.name}
+
     user = relationship("User", back_populates="buy_orders")
     matches = relationship("Match", back_populates="buy_order")
-    security = relationship("Security", back_populates="buy_orders")
+    security = relationship("Security", back_populates="buy_orders", lazy="joined")
     round = relationship("Round", back_populates="buy_orders")
 
 
