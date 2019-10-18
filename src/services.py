@@ -17,6 +17,7 @@ from src.database import (
 from src.exceptions import (
     InvalidRequestException,
     NoActiveRoundException,
+    ResourceNotOwnedException,
     UnauthorizedException,
 )
 from src.match import match_buyers_and_sellers
@@ -202,6 +203,14 @@ class SellOrderService(DefaultService):
             sell_orders = session.query(self.SellOrder).filter_by(user_id=user_id).all()
             return [sell_order.asdict() for sell_order in sell_orders]
 
+    @validate_input({"id": UUID_RULE, "user_id": UUID_RULE})
+    def get_order_by_id(self, id, user_id):
+        with session_scope() as session:
+            order = session.query(self.SellOrder).get(id)
+            if order.user_id != user_id:
+                raise ResourceNotOwnedException("")
+            return order.asdict()
+
     @validate_input(EDIT_ORDER_SCHEMA)
     def edit_order(self, id, subject_id, new_number_of_shares=None, new_price=None):
         with session_scope() as session:
@@ -276,6 +285,14 @@ class BuyOrderService(DefaultService):
         with session_scope() as session:
             buy_orders = session.query(self.BuyOrder).filter_by(user_id=user_id).all()
             return [buy_order.asdict() for buy_order in buy_orders]
+
+    @validate_input({"id": UUID_RULE, "user_id": UUID_RULE})
+    def get_order_by_id(self, id, user_id):
+        with session_scope() as session:
+            order = session.query(self.BuyOrder).get(id)
+            if order.user_id != user_id:
+                raise ResourceNotOwnedException("")
+            return order.asdict()
 
     @validate_input(EDIT_ORDER_SCHEMA)
     def edit_order(self, id, subject_id, new_number_of_shares=None, new_price=None):

@@ -5,7 +5,11 @@ import pytest
 
 from src.config import APP_CONFIG
 from src.database import BuyOrder, Round, Security, User, session_scope
-from src.exceptions import NoActiveRoundException, UnauthorizedException
+from src.exceptions import (
+    NoActiveRoundException,
+    ResourceNotOwnedException,
+    UnauthorizedException,
+)
 from src.services import BuyOrderService
 from tests.fixtures import create_buy_order, create_round, create_security, create_user
 from tests.utils import assert_dict_in
@@ -32,6 +36,26 @@ def test_get_orders_by_user():
         if orders[0]["number_of_shares"] == buy_order["number_of_shares"]
         else orders[0]
     )
+
+
+def test_get_order_by_id():
+    buy_order = create_buy_order()
+
+    order_retrieved = buy_order_service.get_order_by_id(
+        id=buy_order["id"], user_id=buy_order["user_id"]
+    )
+    assert order_retrieved["id"] == buy_order["id"]
+
+
+def test_get_order_by_id__unauthorized():
+    buy_order = create_buy_order()
+    user_id = buy_order["user_id"]
+    false_user_id = ("1" if user_id[0] == "0" else "0") + user_id[1:]
+
+    with pytest.raises(ResourceNotOwnedException):
+        order_retrieved = buy_order_service.get_order_by_id(
+            id=buy_order["id"], user_id=false_user_id
+        )
 
 
 def test_create_order__authorized():

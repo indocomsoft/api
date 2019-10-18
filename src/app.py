@@ -71,7 +71,12 @@ app.blueprint(blueprint)
 
 async def error_handler(request, exception):
     if isinstance(exception, AcquityException):
-        return json({"error": exception.message}, status=exception.status_code)
+        if exception.status_code == 404:
+            message = f"Requested URL {request.path} not found"
+        else:
+            message = exception.message
+
+        return json({"error": message}, status=exception.status_code)
     elif isinstance(exception, SanicException):
         return json({"error": exception.args}, status=exception.status_code)
     traceback.print_exc()

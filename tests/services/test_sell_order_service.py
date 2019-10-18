@@ -4,7 +4,7 @@ import pytest
 
 from src.config import APP_CONFIG
 from src.database import Security, SellOrder, User, session_scope
-from src.exceptions import UnauthorizedException
+from src.exceptions import ResourceNotOwnedException, UnauthorizedException
 from src.services import SellOrderService
 from tests.fixtures import create_security, create_sell_order, create_user
 from tests.utils import assert_dict_in
@@ -31,6 +31,26 @@ def test_get_orders_by_user():
         if orders[0]["number_of_shares"] == sell_order["number_of_shares"]
         else orders[0]
     )
+
+
+def test_get_order_by_id():
+    sell_order = create_sell_order()
+
+    order_retrieved = sell_order_service.get_order_by_id(
+        id=sell_order["id"], user_id=sell_order["user_id"]
+    )
+    assert order_retrieved["id"] == sell_order["id"]
+
+
+def test_get_order_by_id__unauthorized():
+    sell_order = create_sell_order()
+    user_id = sell_order["user_id"]
+    false_user_id = ("1" if user_id[0] == "0" else "0") + user_id[1:]
+
+    with pytest.raises(ResourceNotOwnedException):
+        order_retrieved = sell_order_service.get_order_by_id(
+            id=sell_order["id"], user_id=false_user_id
+        )
 
 
 def test_create_order__authorized():
