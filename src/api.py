@@ -63,7 +63,7 @@ async def get_sell_orders_by_user(request, user):
 @auth_required
 async def get_sell_order_by_id(request, user, id):
     return json(
-        request.app.sell_order_service.get_orders_by_user(id=id, user_id=user["id"])
+        request.app.sell_order_service.get_order_by_id(id=id, user_id=user["id"])
     )
 
 
@@ -91,7 +91,7 @@ async def edit_sell_order(request, user, id):
 @auth_required
 async def delete_sell_order(request, user, id):
     return json(
-        request.app.sell_order_service.edit_order(
+        request.app.sell_order_service.delete_order(
             **request.json, id=id, subject_id=user["id"]
         )
     )
@@ -107,7 +107,7 @@ async def get_buy_orders_by_user(request, user):
 @auth_required
 async def get_buy_order_by_id(request, user, id):
     return json(
-        request.app.buy_order_service.get_orders_by_user(id=id, user_id=user["id"])
+        request.app.buy_order_service.get_order_by_id(id=id, user_id=user["id"])
     )
 
 
@@ -135,7 +135,7 @@ async def edit_buy_order(request, user, id):
 @auth_required
 async def delete_buy_order(request, user, id):
     return json(
-        request.app.buy_order_service.edit_order(
+        request.app.buy_order_service.delete_order(
             **request.json, id=id, subject_id=user["id"]
         )
     )
