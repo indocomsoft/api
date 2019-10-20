@@ -92,10 +92,13 @@ def test_create_order__authorized_no_active_rounds():
         "security_id": security_id,
     }
 
-    with patch(
-        "src.services.RoundService.get_active", return_value=None
-    ), pytest.raises(NoActiveRoundException):
+    with patch("src.services.RoundService.get_active", return_value=None):
         buy_order_id = buy_order_service.create_order(**buy_order_params)["id"]
+
+    with session_scope() as session:
+        buy_order = session.query(BuyOrder).get(buy_order_id).asdict()
+
+    assert_dict_in({**buy_order_params, "round_id": None}, buy_order)
 
 
 def test_create_order__unauthorized():

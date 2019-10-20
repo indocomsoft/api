@@ -99,7 +99,7 @@ class BuyOrder(Base):
     security_id = Column(UUID, ForeignKey("securities.id"), nullable=False)
     number_of_shares = Column(Float, nullable=False)
     price = Column(Float, nullable=False)
-    round_id = Column(UUID, ForeignKey("rounds.id"), nullable=False)
+    round_id = Column(UUID, ForeignKey("rounds.id"))
 
     @property
     def additional_things_to_dict(self):

@@ -3,10 +3,15 @@ from unittest.mock import patch
 import pytest
 
 from src.config import APP_CONFIG
-from src.database import Security, SellOrder, User, session_scope
+from src.database import BuyOrder, Security, SellOrder, User, session_scope
 from src.exceptions import ResourceNotOwnedException, UnauthorizedException
 from src.services import SellOrderService
-from tests.fixtures import create_security, create_sell_order, create_user
+from tests.fixtures import (
+    create_buy_order,
+    create_security,
+    create_sell_order,
+    create_user,
+)
 from tests.utils import assert_dict_in
 
 sell_order_service = SellOrderService(config=APP_CONFIG, SellOrder=SellOrder)
@@ -85,6 +90,7 @@ def test_create_order__add_new_round():
         "price": 30,
         "security_id": security_id,
     }
+    create_buy_order(round_id=None)
 
     with patch("src.services.RoundService.get_active", return_value=None), patch(
         "src.services.RoundService.should_round_start", return_value=False
@@ -98,11 +104,13 @@ def test_create_order__add_new_round():
     with session_scope() as session:
         sell_order = session.query(SellOrder).get(sell_order_id).asdict()
         sell_order2 = session.query(SellOrder).get(sell_order_id2).asdict()
+        buy_order = session.query(BuyOrder).one().asdict()
 
     assert_dict_in(sell_order_params, sell_order)
     assert sell_order["round_id"] is not None
     assert_dict_in(sell_order_params, sell_order2)
     assert sell_order["round_id"] is not None
+    assert buy_order["round_id"] is not None
 
 
 def test_create_order__unauthorized():

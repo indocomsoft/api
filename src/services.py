@@ -189,7 +189,7 @@ class SellOrderService(DefaultService):
                 session.add(sell_order)
                 session.commit()
                 if RoundService(self.config).should_round_start():
-                    self._set_orders_to_new_round()
+                    RoundService(self.config).set_orders_to_new_round()
             else:
                 sell_order.round_id = active_round["id"]
                 session.add(sell_order)
@@ -236,18 +236,6 @@ class SellOrderService(DefaultService):
             session.delete(sell_order)
         return {}
 
-    def _set_orders_to_new_round(self):
-        with session_scope() as session:
-            new_round = self.Round(
-                end_time=datetime.now() + self.config["ACQUITY_ROUND_LENGTH"],
-                is_concluded=False,
-            )
-            session.add(new_round)
-            session.flush()
-
-            for sell_order in session.query(self.SellOrder).filter_by(round_id=None):
-                sell_order.round_id = str(new_round.id)
-
 
 class BuyOrderService(DefaultService):
     def __init__(self, config, BuyOrder=BuyOrder, User=User):
@@ -263,17 +251,13 @@ class BuyOrderService(DefaultService):
                 raise UnauthorizedException("This user cannot buy securities.")
 
             active_round = RoundService(self.config).get_active()
-            if active_round is None:
-                raise NoActiveRoundException(
-                    "There is no active round to associate this buy order with."
-                )
 
             buy_order = self.BuyOrder(
                 user_id=user_id,
                 number_of_shares=number_of_shares,
                 price=price,
                 security_id=security_id,
-                round_id=active_round["id"],
+                round_id=(active_round and active_round["id"]),
             )
 
             session.add(buy_order)
@@ -331,10 +315,11 @@ class SecurityService(DefaultService):
 
 
 class RoundService(DefaultService):
-    def __init__(self, config, Round=Round, SellOrder=SellOrder):
+    def __init__(self, config, Round=Round, SellOrder=SellOrder, BuyOrder=BuyOrder):
         super().__init__(config)
         self.Round = Round
         self.SellOrder = SellOrder
+        self.BuyOrder = BuyOrder
 
     def get_all(self):
         with session_scope() as session:
@@ -376,6 +361,20 @@ class RoundService(DefaultService):
                 total_shares
                 >= self.config["ACQUITY_ROUND_START_TOTAL_SELL_SHARES_CUTOFF"]
             )
+
+    def set_orders_to_new_round(self):
+        with session_scope() as session:
+            new_round = self.Round(
+                end_time=datetime.now() + self.config["ACQUITY_ROUND_LENGTH"],
+                is_concluded=False,
+            )
+            session.add(new_round)
+            session.flush()
+
+            for sell_order in session.query(self.SellOrder).filter_by(round_id=None):
+                sell_order.round_id = str(new_round.id)
+            for buy_order in session.query(self.BuyOrder).filter_by(round_id=None):
+                buy_order.round_id = str(new_round.id)
 
 
 class MatchService(DefaultService):
