@@ -164,3 +164,10 @@ async def ban_user(request, user):
     return json(
         request.app.banned_pair_service.ban_user(**request.json, my_user_id=user["id"])
     )
+
+
+@blueprint.post("/match/<token>")
+async def run_matches(request, token):
+    if token != request.app.config["TEMPORIZE_TOKEN"]:
+        return json(None)
+    return json(request.app.match_service.run_matches(token))

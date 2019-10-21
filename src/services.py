@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from urllib.parse import quote
 
 import requests
 from passlib.hash import argon2
@@ -364,17 +365,27 @@ class RoundService(DefaultService):
 
     def set_orders_to_new_round(self):
         with session_scope() as session:
-            new_round = self.Round(
-                end_time=datetime.now() + self.config["ACQUITY_ROUND_LENGTH"],
-                is_concluded=False,
-            )
+            end_time = datetime.now(timezone.utc) + self.config["ACQUITY_ROUND_LENGTH"]
+            new_round = self.Round(end_time=end_time, is_concluded=False)
             session.add(new_round)
             session.flush()
+
+            self._schedule_event(end_time)
 
             for sell_order in session.query(self.SellOrder).filter_by(round_id=None):
                 sell_order.round_id = str(new_round.id)
             for buy_order in session.query(self.BuyOrder).filter_by(round_id=None):
                 buy_order.round_id = str(new_round.id)
+
+    def _schedule_event(self, end_time):
+        temporize_url = self.config["TEMPORIZE_URL"]
+        end_time_encoded = end_time.strftime("%Y%m%dT%H%M%SZ")
+
+        host = self.config["HOST"]
+        temporize_token = self.config["TEMPORIZE_TOKEN"]
+        callback_url = quote(f"{host}/v1/match/{temporize_token}", safe="")
+
+        requests.post(f"{temporize_url}/v1/events/{end_time_encoded}/{callback_url}")
 
 
 class MatchService(DefaultService):
