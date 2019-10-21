@@ -13,6 +13,7 @@ def seed_db():
                     full_name="Ben",
                     can_buy=True,
                     can_sell=True,
+                    is_committee=True,
                 )
             )
         if session.query(Security).filter_by(name="Grab").count() == 0:

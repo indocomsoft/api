@@ -16,8 +16,7 @@ from src.database import (
     session_scope,
 )
 from src.exceptions import (
-    InvalidRequestException,
-    NoActiveRoundException,
+    NotCommitteeException,
     ResourceNotOwnedException,
     UnauthorizedException,
 )
@@ -27,11 +26,7 @@ from src.schemata import (
     CREATE_USER_SCHEMA,
     DELETE_ORDER_SCHEMA,
     EDIT_ORDER_SCHEMA,
-    EMAIL_RULE,
     INVITE_SCHEMA,
-    LINKEDIN_BUYER_PRIVILEGES_SCHEMA,
-    LINKEDIN_CODE_SCHEMA,
-    LINKEDIN_TOKEN_SCHEMA,
     USER_AUTH_SCHEMA,
     UUID_RULE,
     validate_input,
@@ -81,11 +76,27 @@ class UserService(DefaultService):
     def invite_to_be_seller(self, inviter_id, invited_id):
         with session_scope() as session:
             inviter = session.query(self.User).get(inviter_id)
-            if not inviter.can_sell:
-                raise UnauthorizedException("Inviter is not a previous seller.")
+            if not inviter.is_committee:
+                raise NotCommitteeException("Inviter is not a committee.")
 
             invited = session.query(self.User).get(invited_id)
             invited.can_sell = True
+
+            session.commit()
+
+            result = invited.asdict()
+        result.pop("hashed_password")
+        return result
+
+    @validate_input(INVITE_SCHEMA)
+    def invite_to_be_buyer(self, inviter_id, invited_id):
+        with session_scope() as session:
+            inviter = session.query(self.User).get(inviter_id)
+            if not inviter.is_committee:
+                raise NotCommitteeException("Inviter is not a committee.")
+
+            invited = session.query(self.User).get(invited_id)
+            invited.can_buy = True
 
             session.commit()
 
@@ -111,57 +122,6 @@ class UserService(DefaultService):
             user_dict = user.asdict()
         user_dict.pop("hashed_password")
         return user_dict
-
-    @validate_input({"email": EMAIL_RULE})
-    def get_user_by_email(self, email):
-        with session_scope() as session:
-            user = session.query(self.User).filter_by(email=email).one().asdict()
-        user.pop("hashed_password")
-        return user
-
-
-class LinkedinService(DefaultService):
-    def __init__(self, config):
-        super().__init__(config)
-
-    @validate_input(LINKEDIN_BUYER_PRIVILEGES_SCHEMA)
-    def activate_buyer_privileges(self, code, redirect_uri, user_email):
-        linkedin_email = self._get_user_data(code=code, redirect_uri=redirect_uri)
-        if linkedin_email == user_email:
-            user = UserService(self.config).get_user_by_email(email=user_email)
-            return UserService(self.config).activate_buy_privileges(
-                user_id=user.get("id")
-            )
-        else:
-            raise InvalidRequestException("Linkedin email does not match")
-
-    @validate_input(LINKEDIN_CODE_SCHEMA)
-    def _get_user_data(self, code, redirect_uri):
-        token = self._get_token(code=code, redirect_uri=redirect_uri)
-        return self._get_user_email(token=token)
-
-    @validate_input(LINKEDIN_CODE_SCHEMA)
-    def _get_token(self, code, redirect_uri):
-        token = requests.post(
-            "https://www.linkedin.com/oauth/v2/accessToken",
-            headers={"Content-Type": "x-www-form-urlencoded"},
-            params={
-                "grant_type": "authorization_code",
-                "code": code,
-                "redirect_uri": redirect_uri,
-                "client_id": self.config["CLIENT_ID"],
-                "client_secret": self.config["CLIENT_SECRET"],
-            },
-        ).json()
-        return token.get("access_token")
-
-    @validate_input(LINKEDIN_TOKEN_SCHEMA)
-    def _get_user_email(self, token):
-        email = requests.get(
-            "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))",
-            headers={"Authorization": f"Bearer {token}"},
-        ).json()
-        return email.get("elements")[0].get("handle~").get("emailAddress")
 
 
 class SellOrderService(DefaultService):

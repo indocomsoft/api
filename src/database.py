@@ -58,8 +58,9 @@ class User(Base):
     email = Column(String, nullable=False, unique=True)
     hashed_password = Column(String, nullable=False)
     full_name = Column(String, nullable=False)
-    can_buy = Column(Boolean, nullable=False)
-    can_sell = Column(Boolean, nullable=False)
+    can_buy = Column(Boolean, nullable=False, server_default="t")
+    can_sell = Column(Boolean, nullable=False, server_default="t")
+    is_committee = Column(Boolean, nullable=False, server_default="t")
 
     sell_orders = relationship("SellOrder", back_populates="user")
     buy_orders = relationship("BuyOrder", back_populates="user")

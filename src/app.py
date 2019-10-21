@@ -13,7 +13,6 @@ from src.exceptions import AcquityException
 from src.services import (
     BannedPairService,
     BuyOrderService,
-    LinkedinService,
     MatchService,
     RoundService,
     SecurityService,
@@ -25,7 +24,6 @@ app = Sanic(load_env=False)
 app.config.update(APP_CONFIG)
 
 app.user_service = UserService(app.config)
-app.linkedin_service = LinkedinService(app.config)
 app.sell_order_service = SellOrderService(app.config)
 app.buy_order_service = BuyOrderService(app.config)
 app.security_service = SecurityService(app.config)

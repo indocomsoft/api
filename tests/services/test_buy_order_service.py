@@ -5,11 +5,7 @@ import pytest
 
 from src.config import APP_CONFIG
 from src.database import BuyOrder, Round, Security, User, session_scope
-from src.exceptions import (
-    NoActiveRoundException,
-    ResourceNotOwnedException,
-    UnauthorizedException,
-)
+from src.exceptions import ResourceNotOwnedException, UnauthorizedException
 from src.services import BuyOrderService
 from tests.fixtures import create_buy_order, create_round, create_security, create_user
 from tests.utils import assert_dict_in

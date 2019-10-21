@@ -27,6 +27,7 @@ def attributes_for_user(id="", **kwargs):
         "full_name": f"a{id}",
         "can_buy": True,
         "can_sell": True,
+        "is_committee": True,
         **kwargs,
     }
 

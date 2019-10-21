@@ -17,9 +17,9 @@ class UnauthorizedException(AcquityException):
     status_code = 403
 
 
-class ResourceNotOwnedException(AcquityException):
+class NotCommitteeException(AcquityException):
     status_code = 404
 
 
-class NoActiveRoundException(AcquityException):
-    status_code = 400
+class ResourceNotOwnedException(AcquityException):
+    status_code = 404
