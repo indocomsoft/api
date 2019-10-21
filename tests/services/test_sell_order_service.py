@@ -123,6 +123,23 @@ def test_create_order__unauthorized():
         )
 
 
+def test_create_order__limit_reached():
+    user_id = create_user()["id"]
+    security_id = create_security()["id"]
+
+    sell_order_params = {
+        "user_id": user_id,
+        "number_of_shares": 20,
+        "price": 30,
+        "security_id": security_id,
+    }
+
+    for _ in range(APP_CONFIG["ACQUITY_SELL_ORDER_PER_ROUND_LIMIT"]):
+        sell_order_service.create_order(**sell_order_params)
+    with pytest.raises(UnauthorizedException):
+        sell_order_service.create_order(**sell_order_params)
+
+
 def test_edit_order():
     user_id = create_user()["id"]
     sell_order = create_sell_order(user_id=user_id)

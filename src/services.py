@@ -178,6 +178,12 @@ class SellOrderService(DefaultService):
             if not user.can_sell:
                 raise UnauthorizedException("This user cannot sell securities.")
 
+            sell_order_count = (
+                session.query(self.SellOrder).filter_by(user_id=user_id).count()
+            )
+            if sell_order_count >= self.config["ACQUITY_SELL_ORDER_PER_ROUND_LIMIT"]:
+                raise UnauthorizedException("Limit of sell orders reached.")
+
             sell_order = self.SellOrder(
                 user_id=user_id,
                 number_of_shares=number_of_shares,
@@ -250,6 +256,12 @@ class BuyOrderService(DefaultService):
             user = session.query(self.User).get(user_id)
             if not user.can_buy:
                 raise UnauthorizedException("This user cannot buy securities.")
+
+            buy_order_count = (
+                session.query(self.BuyOrder).filter_by(user_id=user_id).count()
+            )
+            if buy_order_count >= self.config["ACQUITY_BUY_ORDER_PER_ROUND_LIMIT"]:
+                raise UnauthorizedException("Limit of buy orders reached.")
 
             active_round = RoundService(self.config).get_active()
 
