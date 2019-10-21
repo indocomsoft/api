@@ -16,7 +16,7 @@ from src.database import (
     session_scope,
 )
 from src.exceptions import (
-    NotCommitteeException,
+    ResourceNotFoundException,
     ResourceNotOwnedException,
     UnauthorizedException,
 )
@@ -66,6 +66,9 @@ class UserService(DefaultService):
     def activate_buy_privileges(self, user_id):
         with session_scope() as session:
             user = session.query(self.User).get(user_id)
+            if user is None:
+                raise ResourceNotFoundException()
+
             user.can_buy = True
             session.commit()
             result = user.asdict()
@@ -76,8 +79,10 @@ class UserService(DefaultService):
     def invite_to_be_seller(self, inviter_id, invited_id):
         with session_scope() as session:
             inviter = session.query(self.User).get(inviter_id)
+            if inviter is None:
+                raise ResourceNotFoundException()
             if not inviter.is_committee:
-                raise NotCommitteeException("Inviter is not a committee.")
+                raise UnauthorizedException("Inviter is not a committee.")
 
             invited = session.query(self.User).get(invited_id)
             invited.can_sell = True
@@ -92,8 +97,10 @@ class UserService(DefaultService):
     def invite_to_be_buyer(self, inviter_id, invited_id):
         with session_scope() as session:
             inviter = session.query(self.User).get(inviter_id)
+            if inviter is None:
+                raise ResourceNotFoundException()
             if not inviter.is_committee:
-                raise NotCommitteeException("Inviter is not a committee.")
+                raise UnauthorizedException("Inviter is not a committee.")
 
             invited = session.query(self.User).get(invited_id)
             invited.can_buy = True
@@ -107,7 +114,9 @@ class UserService(DefaultService):
     @validate_input(USER_AUTH_SCHEMA)
     def authenticate(self, email, password):
         with session_scope() as session:
-            user = session.query(self.User).filter_by(email=email).one()
+            user = session.query(self.User).filter_by(email=email).one_or_none()
+            if user is None:
+                raise ResourceNotFoundException()
             if self.hasher.verify(password, user.hashed_password):
                 return user.asdict()
             else:
@@ -117,6 +126,8 @@ class UserService(DefaultService):
     def get_user(self, id):
         with session_scope() as session:
             user = session.query(self.User).get(id)
+            if user is None:
+                raise ResourceNotFoundException()
             if user is None:
                 raise NoResultFound
             user_dict = user.asdict()
@@ -135,6 +146,8 @@ class SellOrderService(DefaultService):
     def create_order(self, user_id, number_of_shares, price, security_id):
         with session_scope() as session:
             user = session.query(self.User).get(user_id)
+            if user is None:
+                raise ResourceNotFoundException()
             if not user.can_sell:
                 raise UnauthorizedException("This user cannot sell securities.")
 
@@ -174,16 +187,20 @@ class SellOrderService(DefaultService):
     def get_order_by_id(self, id, user_id):
         with session_scope() as session:
             order = session.query(self.SellOrder).get(id)
+            if order is None:
+                raise ResourceNotFoundException()
             if order.user_id != user_id:
-                raise ResourceNotOwnedException("")
+                raise ResourceNotOwnedException()
             return order.asdict()
 
     @validate_input(EDIT_ORDER_SCHEMA)
     def edit_order(self, id, subject_id, new_number_of_shares=None, new_price=None):
         with session_scope() as session:
             sell_order = session.query(self.SellOrder).get(id)
+            if sell_order is None:
+                raise ResourceNotFoundException()
             if sell_order.user_id != subject_id:
-                raise UnauthorizedException("You need to own this order.")
+                raise ResourceNotOwnedException("You need to own this order.")
 
             if new_number_of_shares is not None:
                 sell_order.number_of_shares = new_number_of_shares
@@ -197,8 +214,10 @@ class SellOrderService(DefaultService):
     def delete_order(self, id, subject_id):
         with session_scope() as session:
             sell_order = session.query(self.SellOrder).get(id)
+            if sell_order is None:
+                raise ResourceNotFoundException()
             if sell_order.user_id != subject_id:
-                raise UnauthorizedException("You need to own this order.")
+                raise ResourceNotOwnedException("You need to own this order.")
 
             session.delete(sell_order)
         return {}
@@ -214,6 +233,8 @@ class BuyOrderService(DefaultService):
     def create_order(self, user_id, number_of_shares, price, security_id):
         with session_scope() as session:
             user = session.query(self.User).get(user_id)
+            if user is None:
+                raise ResourceNotFoundException()
             if not user.can_buy:
                 raise UnauthorizedException("This user cannot buy securities.")
 
@@ -247,16 +268,20 @@ class BuyOrderService(DefaultService):
     def get_order_by_id(self, id, user_id):
         with session_scope() as session:
             order = session.query(self.BuyOrder).get(id)
+            if order is None:
+                raise ResourceNotFoundException()
             if order.user_id != user_id:
-                raise ResourceNotOwnedException("")
+                raise ResourceNotOwnedException()
             return order.asdict()
 
     @validate_input(EDIT_ORDER_SCHEMA)
     def edit_order(self, id, subject_id, new_number_of_shares=None, new_price=None):
         with session_scope() as session:
             buy_order = session.query(self.BuyOrder).get(id)
+            if buy_order is None:
+                raise ResourceNotFoundException()
             if buy_order.user_id != subject_id:
-                raise UnauthorizedException("You need to own this order.")
+                raise ResourceNotOwnedException("You need to own this order.")
 
             if new_number_of_shares is not None:
                 buy_order.number_of_shares = new_number_of_shares
@@ -270,8 +295,10 @@ class BuyOrderService(DefaultService):
     def delete_order(self, id, subject_id):
         with session_scope() as session:
             buy_order = session.query(self.BuyOrder).get(id)
+            if buy_order is None:
+                raise ResourceNotFoundException()
             if buy_order.user_id != subject_id:
-                raise UnauthorizedException("You need to own this order.")
+                raise ResourceNotOwnedException("You need to own this order.")
 
             session.delete(buy_order)
         return {}

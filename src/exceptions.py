@@ -1,7 +1,7 @@
 class AcquityException(Exception):
     status_code = 500
 
-    def __init__(self, message, status_code=None):
+    def __init__(self, message="", status_code=None):
         self.message = message
         if status_code is not None:
             self.status_code = status_code
@@ -17,9 +17,9 @@ class UnauthorizedException(AcquityException):
     status_code = 403
 
 
-class NotCommitteeException(AcquityException):
+class ResourceNotOwnedException(AcquityException):
     status_code = 404
 
 
-class ResourceNotOwnedException(AcquityException):
+class ResourceNotFoundException(AcquityException):
     status_code = 404

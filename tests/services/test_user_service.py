@@ -4,7 +4,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from src.config import APP_CONFIG
 from src.database import User, session_scope
-from src.exceptions import NotCommitteeException
+from src.exceptions import ResourceNotFoundException, UnauthorizedException
 from src.services import UserService
 from tests.fixtures import attributes_for_user, create_user
 from tests.utils import assert_dict_in
@@ -44,7 +44,7 @@ def test_invite_to_be_seller__unauthorized():
     inviter_id = create_user("1", is_committee=False)["id"]
     invited_id = create_user("2")["id"]
 
-    with pytest.raises(NotCommitteeException):
+    with pytest.raises(UnauthorizedException):
         user_service.invite_to_be_seller(inviter_id=inviter_id, invited_id=invited_id)
 
 
@@ -62,7 +62,7 @@ def test_invite_to_be_buyer__unauthorized():
     inviter_id = create_user("1", is_committee=False)["id"]
     invited_id = create_user("2")["id"]
 
-    with pytest.raises(NotCommitteeException):
+    with pytest.raises(UnauthorizedException):
         user_service.invite_to_be_buyer(inviter_id=inviter_id, invited_id=invited_id)
 
 
@@ -88,5 +88,5 @@ def test_get_user():
     user_params.pop("hashed_password")
     assert user_params == user
 
-    with pytest.raises(NoResultFound):
+    with pytest.raises(ResourceNotFoundException):
         user_service.get_user(id="00000000-0000-0000-0000-000000000000")
