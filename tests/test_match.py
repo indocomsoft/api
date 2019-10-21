@@ -255,6 +255,33 @@ PRICE_MISMATCH_CASE = (
     set([
     ]),
 )
+
+BANNED_PAIR_NO_RESULT_CASE = (
+    [
+        {"id": "b1", "user_id": "A", "number_of_shares": 20, "price": 6},
+        {"id": "b2", "user_id": "B", "number_of_shares": 20, "price": 7},
+    ],
+    [
+        {"id": "s1", "user_id": "C", "number_of_shares": 20, "price": 7},
+    ],
+    [("B", "C")],
+    set([
+    ]),
+)
+
+BANNED_PAIR_OTHER_PAIR_MATCH_RESULT_CASE = (
+    [
+        {"id": "b1", "user_id": "A", "number_of_shares": 20, "price": 7},
+        {"id": "b2", "user_id": "B", "number_of_shares": 20, "price": 8},
+    ],
+    [
+        {"id": "s1", "user_id": "C", "number_of_shares": 20, "price": 7},
+    ],
+    [("A", "C")],
+    set([
+        ("b2", "s1"),
+    ]),
+)
 # fmt: on
 
 TEST_CASES = [
@@ -270,6 +297,8 @@ TEST_CASES = [
     POPULATED_MARKET_CASE,
     NEAREST_PRICE_BRACKET_CASE,
     PRICE_MISMATCH_CASE,
+    BANNED_PAIR_NO_RESULT_CASE,
+    BANNED_PAIR_OTHER_PAIR_MATCH_RESULT_CASE,
 ]
 
 

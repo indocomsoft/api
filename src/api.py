@@ -154,3 +154,12 @@ async def get_all_rounds(request):
 @blueprint.get("/round/active")
 async def get_active_round(request):
     return json(request.app.round_service.get_active())
+
+
+@blueprint.post("/ban/")
+@auth_required
+@expects_json_object
+async def ban_user(request, user):
+    return json(
+        request.app.banned_pair_service.ban_user(**request.json, my_user_id=user["id"])
+    )

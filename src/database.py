@@ -14,6 +14,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.schema import UniqueConstraint
 
 from src.config import APP_CONFIG
 
@@ -62,6 +63,12 @@ class User(Base):
 
     sell_orders = relationship("SellOrder", back_populates="user")
     buy_orders = relationship("BuyOrder", back_populates="user")
+    bans_as_buyer = relationship(
+        "BannedPair", back_populates="buyer", foreign_keys="[BannedPair.buyer_id]"
+    )
+    bans_as_seller = relationship(
+        "BannedPair", back_populates="seller", foreign_keys="[BannedPair.seller_id]"
+    )
 
 
 class Security(Base):
@@ -131,6 +138,22 @@ class Round(Base):
 
     buy_orders = relationship("BuyOrder", back_populates="round")
     sell_orders = relationship("SellOrder", back_populates="round")
+
+
+class BannedPair(Base):
+    __tablename__ = "banned_pairs"
+
+    buyer_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    seller_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+
+    buyer = relationship(
+        "User", back_populates="bans_as_buyer", foreign_keys=[buyer_id]
+    )
+    seller = relationship(
+        "User", back_populates="bans_as_seller", foreign_keys=[seller_id]
+    )
+
+    __table_args__ = (UniqueConstraint("buyer_id", "seller_id"),)
 
 
 engine = create_engine(APP_CONFIG["DATABASE_URL"])

@@ -6,6 +6,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
 
 from src.database import (
+    BannedPair,
     BuyOrder,
     Match,
     Round,
@@ -378,11 +379,19 @@ class RoundService(DefaultService):
 
 
 class MatchService(DefaultService):
-    def __init__(self, config, BuyOrder=BuyOrder, SellOrder=SellOrder, Match=Match):
+    def __init__(
+        self,
+        config,
+        BuyOrder=BuyOrder,
+        SellOrder=SellOrder,
+        Match=Match,
+        BannedPair=BannedPair,
+    ):
         super().__init__(config)
         self.BuyOrder = BuyOrder
         self.SellOrder = SellOrder
         self.Match = Match
+        self.BannedPair = BannedPair
 
     def run_matches(self):
         round_id = RoundService(self.config).get_active()["id"]
@@ -398,8 +407,12 @@ class MatchService(DefaultService):
                 .filter_by(round_id=round_id)
                 .all()
             ]
+            banned_pairs = [
+                (bp.buyer_id, bp.seller_id)
+                for bp in session.query(self.BannedPair).all()
+            ]
 
-        match_results = match_buyers_and_sellers(buy_orders, sell_orders, [])
+        match_results = match_buyers_and_sellers(buy_orders, sell_orders, banned_pairs)
 
         with session_scope() as session:
             for buy_order_id, sell_order_id in match_results:
@@ -409,3 +422,20 @@ class MatchService(DefaultService):
                 session.add(match)
 
             session.query(Round).get(round_id).is_concluded = True
+
+
+class BannedPairService(DefaultService):
+    def __init__(self, config, BannedPair=BannedPair):
+        super().__init__(config)
+        self.BannedPair = BannedPair
+
+    @validate_input({"my_user_id": UUID_RULE, "other_user_id": UUID_RULE})
+    def ban_user(self, my_user_id, other_user_id):
+        # Currently this bans the user two-way: both as buyer and as seller
+        with session_scope() as session:
+            session.add_all(
+                [
+                    self.BannedPair(buyer_id=my_user_id, seller_id=other_user_id),
+                    self.BannedPair(buyer_id=other_user_id, seller_id=my_user_id),
+                ]
+            )
