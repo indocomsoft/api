@@ -1,14 +1,19 @@
 from datetime import datetime, timezone
+from operator import itemgetter
 from urllib.parse import quote
 
 import requests
 from passlib.hash import argon2
+from sqlalchemy import and_, asc, desc, funcfilter, or_
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
 
 from src.database import (
     BannedPair,
     BuyOrder,
+    Chat,
+    ChatRoom,
     Match,
     Round,
     Security,
@@ -449,3 +454,152 @@ class BannedPairService(DefaultService):
                     self.BannedPair(buyer_id=other_user_id, seller_id=my_user_id),
                 ]
             )
+
+
+def serialize_chat(chat_room_result, chat_result, buyer, seller, user_id):
+    (author, dealer) = (
+        (seller, buyer) if seller.get("id") == user_id else (buyer, seller)
+    )
+    return {
+        "dealer_name": dealer.get("full_name"),
+        "dealer_id": dealer.get("id"),
+        "created_at": datetime.timestamp(chat_result.get("created_at")),
+        "updated_at": datetime.timestamp(chat_result.get("updated_at")),
+        "author_name": author.get("full_name"),
+        "author_id": author.get("id"),
+        "message": chat_result.get("message"),
+        "chatRoom_id": chat_room_result.get("id"),
+    }
+
+
+class ChatService(DefaultService):
+    def __init__(
+        self, config, User=User, UserService=UserService, Chat=Chat, ChatRoom=ChatRoom
+    ):
+        self.Buyer = aliased(User)
+        self.Seller = aliased(User)
+        self.User = User
+        self.Chat = Chat
+        self.UserService = UserService
+        self.ChatRoom = ChatRoom
+        self.config = config
+
+    def add_message(self, chat_room_id, message, author_id):
+        with session_scope() as session:
+            chat = Chat(
+                chat_room_id=str(chat_room_id),
+                message=message,
+                author_id=str(author_id),
+            )
+            session.add(chat)
+            session.flush()
+            session.refresh(chat)
+            chat = chat.asdict()
+
+            result = (
+                session.query(self.ChatRoom, self.Buyer, self.Seller)
+                .filter_by(id=chat.get("chat_room_id"))
+                .outerjoin(self.Buyer, self.Buyer.id == self.ChatRoom.buyer_id)
+                .outerjoin(self.Seller, self.Seller.id == self.ChatRoom.seller_id)
+                .one()
+            )
+            return serialize_chat(
+                chat_room_result=result[0].asdict(),
+                chat_result=chat,
+                buyer=result[1].asdict(),
+                seller=result[2].asdict(),
+                user_id=author_id,
+            )
+
+    def get_conversation(self, user_id, chat_room_id):
+        with session_scope() as session:
+            results = (
+                session.query(self.ChatRoom, self.Chat, self.Buyer, self.Seller)
+                .filter(self.ChatRoom.id == chat_room_id)
+                .outerjoin(self.Chat, self.Chat.chat_room_id == self.ChatRoom.id)
+                .outerjoin(self.Buyer, self.Buyer.id == self.ChatRoom.buyer_id)
+                .outerjoin(self.Seller, self.Seller.id == self.ChatRoom.seller_id)
+                .all()
+            )
+
+            data = []
+            for result in results:
+                data.append(
+                    serialize_chat(
+                        chat_room_result=result[0].asdict(),
+                        chat_result=result[1].asdict(),
+                        buyer=result[2].asdict(),
+                        seller=result[3].asdict(),
+                        user_id=user_id,
+                    )
+                )
+            return sorted(data, key=lambda item: item["created_at"])
+
+
+class ChatRoomService(DefaultService):
+    def __init__(
+        self,
+        config,
+        User=User,
+        Chat=Chat,
+        UserService=UserService,
+        ChatRoom=ChatRoom,
+        ChatService=ChatService,
+    ):
+        self.Buyer = aliased(User)
+        self.Seller = aliased(User)
+        self.User = User
+        self.Chat = Chat
+        self.UserService = UserService
+        self.ChatRoom = ChatRoom
+        self.ChatService = ChatService
+        self.config = config
+
+    def get_chat_rooms(self, user_id):
+        data = []
+        with session_scope() as session:
+
+            subq = (
+                session.query(
+                    self.Chat.chat_room_id,
+                    func.max(self.Chat.created_at).label("maxdate"),
+                )
+                .group_by(self.Chat.chat_room_id)
+                .subquery()
+            )
+
+            results = (
+                (
+                    session.query(self.Chat, self.ChatRoom, self.Buyer, self.Seller)
+                    .join(
+                        subq,
+                        and_(
+                            self.Chat.chat_room_id == subq.c.chat_room_id,
+                            self.Chat.created_at == subq.c.maxdate,
+                        ),
+                    )
+                    .outerjoin(
+                        self.ChatRoom, self.ChatRoom.id == self.Chat.chat_room_id
+                    )
+                )
+                .filter(
+                    or_(
+                        self.ChatRoom.seller_id == user_id,
+                        self.ChatRoom.buyer_id == user_id,
+                    )
+                )
+                .outerjoin(self.Buyer, self.Buyer.id == self.ChatRoom.buyer_id)
+                .outerjoin(self.Seller, self.Seller.id == self.ChatRoom.seller_id)
+                .all()
+            )
+            for result in results:
+                data.append(
+                    serialize_chat(
+                        chat_room_result=result[1].asdict(),
+                        chat_result=result[0].asdict(),
+                        buyer=result[2].asdict(),
+                        seller=result[3].asdict(),
+                        user_id=user_id,
+                    )
+                )
+        return sorted(data, key=lambda item: item["created_at"], reverse=True)

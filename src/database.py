@@ -8,6 +8,8 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     String,
+    Text,
+    UniqueConstraint,
     create_engine,
     func,
 )
@@ -155,6 +157,23 @@ class BannedPair(Base):
     )
 
     __table_args__ = (UniqueConstraint("buyer_id", "seller_id"),)
+
+
+class ChatRoom(Base):
+    __tablename__ = "chat_rooms"
+
+    seller_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    buyer_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+
+    __table_args__ = (UniqueConstraint("seller_id", "buyer_id"),)
+
+
+class Chat(Base):
+    __tablename__ = "chats"
+
+    chat_room_id = Column(UUID, ForeignKey("chat_rooms.id"), nullable=False)
+    message = Column(Text, nullable=False)
+    author_id = Column(UUID, ForeignKey("users.id"), nullable=False)
 
 
 engine = create_engine(APP_CONFIG["DATABASE_URL"])

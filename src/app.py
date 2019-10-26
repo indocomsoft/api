@@ -1,5 +1,6 @@
 import traceback
 
+import socketio
 from sanic import Sanic
 from sanic.exceptions import SanicException
 from sanic.response import json
@@ -8,11 +9,14 @@ from sanic_jwt import Initialize as initialize_jwt
 from sanic_jwt import Responses
 
 from src.api import blueprint, user_login
+from src.chat_service import ChatSocketService
 from src.config import APP_CONFIG
 from src.exceptions import AcquityException
 from src.services import (
     BannedPairService,
     BuyOrderService,
+    ChatRoomService,
+    ChatService,
     MatchService,
     RoundService,
     SecurityService,
@@ -30,7 +34,12 @@ app.security_service = SecurityService(app.config)
 app.round_service = RoundService(app.config)
 app.match_service = MatchService(app.config)
 app.banned_pair_service = BannedPairService(app.config)
+app.chat_room_service = ChatRoomService(app.config)
+app.chat_service = ChatService(app.config)
 
+sio = socketio.AsyncServer(async_mode="sanic", cors_allowed_origins=[])
+sio.attach(app)
+sio.register_namespace(ChatSocketService("/v1/chat", app.config))
 initialize_cors(app)
 
 
