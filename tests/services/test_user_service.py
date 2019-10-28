@@ -9,7 +9,7 @@ from src.services import UserService
 from tests.fixtures import attributes_for_user, create_user
 from tests.utils import assert_dict_in
 
-user_service = UserService(config=APP_CONFIG, User=User, hasher=plaintext)
+user_service = UserService(config=APP_CONFIG, hasher=plaintext)
 
 
 def test_create():

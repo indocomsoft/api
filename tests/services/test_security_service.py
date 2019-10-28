@@ -3,7 +3,7 @@ from src.database import Security, session_scope
 from src.services import SecurityService
 from tests.fixtures import create_security
 
-security_service = SecurityService(config=APP_CONFIG, Security=Security)
+security_service = SecurityService(config=APP_CONFIG)
 
 
 def test_get_all():

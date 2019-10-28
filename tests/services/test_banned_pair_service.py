@@ -3,7 +3,7 @@ from src.database import BannedPair, session_scope
 from src.services import BannedPairService
 from tests.fixtures import create_user
 
-banned_pair_service = BannedPairService(config=APP_CONFIG, BannedPair=BannedPair)
+banned_pair_service = BannedPairService(config=APP_CONFIG)
 
 
 def test_ban_user():

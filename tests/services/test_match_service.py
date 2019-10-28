@@ -20,13 +20,7 @@ from tests.fixtures import (
     create_user,
 )
 
-match_service = MatchService(
-    config=APP_CONFIG,
-    BuyOrder=BuyOrder,
-    SellOrder=SellOrder,
-    Match=Match,
-    ChatRoom=ChatRoom,
-)
+match_service = MatchService(config=APP_CONFIG)
 
 
 def test_run_matches():

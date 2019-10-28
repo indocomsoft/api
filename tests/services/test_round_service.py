@@ -5,7 +5,7 @@ from src.database import Round, Security, SellOrder, User, session_scope
 from src.services import RoundService
 from tests.fixtures import attributes_for_round, create_round, create_sell_order
 
-round_service = RoundService(config=APP_CONFIG, Round=Round, SellOrder=SellOrder)
+round_service = RoundService(config=APP_CONFIG)
 
 
 def test_get_all():

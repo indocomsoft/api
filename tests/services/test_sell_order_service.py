@@ -14,7 +14,7 @@ from tests.fixtures import (
 )
 from tests.utils import assert_dict_in
 
-sell_order_service = SellOrderService(config=APP_CONFIG, SellOrder=SellOrder)
+sell_order_service = SellOrderService(config=APP_CONFIG)
 
 
 def test_get_orders_by_user():

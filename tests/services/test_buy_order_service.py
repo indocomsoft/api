@@ -10,7 +10,7 @@ from src.services import BuyOrderService
 from tests.fixtures import create_buy_order, create_round, create_security, create_user
 from tests.utils import assert_dict_in
 
-buy_order_service = BuyOrderService(config=APP_CONFIG, BuyOrder=BuyOrder, User=User)
+buy_order_service = BuyOrderService(config=APP_CONFIG)
 
 
 def test_get_orders_by_user():
