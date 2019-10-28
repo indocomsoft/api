@@ -1,4 +1,4 @@
-from sanic import Blueprint
+from sanic import Blueprint, response
 from sanic.response import json
 from sanic_jwt.decorators import inject_user, protected
 from sanic_jwt.exceptions import AuthenticationFailed
@@ -171,3 +171,18 @@ async def run_matches(request, token):
     if token != request.app.config["TEMPORIZE_TOKEN"]:
         return json(None)
     return json(request.app.match_service.run_matches(token))
+
+
+@blueprint.get("/linkedin/auth")
+async def linkedin_auth(request):
+    socket_id = request.args.get("socketId")
+    url = request.app.social_login.get_auth_url(socket_id)
+    return response.redirect(url)
+
+
+@blueprint.get("/linkedin/auth/callback")
+async def linkedin_auth(request):
+    code = request.args.get("code")
+    state = request.args.get("state")
+    await request.app.social_login.authenticate(code=code, socket_id=state)
+    return json({"data": "success"})

@@ -140,6 +140,17 @@ class UserService(DefaultService):
         user_dict.pop("hashed_password")
         return user_dict
 
+    def get_user_by_email(self, email):
+        with session_scope() as session:
+            user = session.query(self.User).filter_by(email=email).one_or_none()
+            if user is None:
+                raise InvalidRequestException("Linkedin email does not match")
+            if user is None:
+                raise NoResultFound
+            user_dict = user.asdict()
+        user_dict.pop("hashed_password")
+        return user_dict
+
 
 class SellOrderService(DefaultService):
     def __init__(self, config, SellOrder=SellOrder, User=User, Round=Round):
@@ -603,3 +614,68 @@ class ChatRoomService(DefaultService):
                     )
                 )
         return sorted(data, key=lambda item: item["created_at"], reverse=True)
+
+
+class SocialLogin(DefaultService):
+    def __init__(self, config, sio, UserService=UserService):
+        self.config = config
+        self.sio = sio
+        self.UserService = UserService
+
+    def get_auth_url(self, socket_id):
+        self.join_room(socket_id)
+        host = self.config.get("HOST")
+        client_id = self.config.get("CLIENT_ID")
+        response_type = "code"
+        redirect_uri = f"{host}/v1/linkedin/auth/callback"
+        scope = "r_liteprofile%20r_emailaddress%20w_member_social"
+        url = f"https://www.linkedin.com/oauth/v2/authorization?response_type={response_type}&client_id={client_id}&redirect_uri={redirect_uri}&scope={scope}&state={socket_id}"
+        return url
+
+    def join_room(self, socket_id):
+        self.sio.enter_room(socket_id, "linkedin")
+
+    async def authenticate(self, code, socket_id):
+        token = self.get_token(code=code)
+        full_name = self.get_user_profile(token=token)
+        email = self.get_user_email(token=token)
+        user = self.UserService(self.config).get_user_by_email(email=email)
+        user = self.UserService(self.config).activate_buy_privileges(
+            user_id=user.get("id")
+        )
+        user["created_at"] = user.get("created_at").timestamp()
+        user["updated_at"] = user.get("updated_at").timestamp()
+        await self.sio.emit("provider", user, namespace="/v1/", room=socket_id)
+        self.sio.leave_room(socket_id, "linkedin")
+
+    def get_token(self, code):
+        host = self.config.get("HOST")
+        redirect_uri = f"{host}/v1/linkedin/auth/callback"
+        token = requests.post(
+            "https://www.linkedin.com/oauth/v2/accessToken",
+            headers={"Content-Type": "x-www-form-urlencoded"},
+            params={
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": redirect_uri,
+                "client_id": self.config.get("CLIENT_ID"),
+                "client_secret": self.config.get("CLIENT_SECRET"),
+            },
+        ).json()
+        return token.get("access_token")
+
+    def get_user_profile(self, token):
+        user_profile = requests.get(
+            "https://api.linkedin.com/v2/me",
+            headers={"Authorization": f"Bearer {token}"},
+        ).json()
+        first_name = user_profile.get("localizedFirstName")
+        last_name = user_profile.get("localizedLastName")
+        return {"full_name": f"{first_name} {last_name}"}
+
+    def get_user_email(self, token):
+        email = requests.get(
+            "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))",
+            headers={"Authorization": f"Bearer {token}"},
+        ).json()
+        return email.get("elements")[0].get("handle~").get("emailAddress")

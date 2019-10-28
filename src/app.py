@@ -21,11 +21,16 @@ from src.services import (
     RoundService,
     SecurityService,
     SellOrderService,
+    SocialLogin,
     UserService,
 )
 
 app = Sanic(load_env=False)
 app.config.update(APP_CONFIG)
+
+sio = socketio.AsyncServer(async_mode="sanic", cors_allowed_origins=[])
+sio.attach(app)
+sio.register_namespace(ChatSocketService("/v1/chat", app.config))
 
 app.user_service = UserService(app.config)
 app.sell_order_service = SellOrderService(app.config)
@@ -36,10 +41,8 @@ app.match_service = MatchService(app.config)
 app.banned_pair_service = BannedPairService(app.config)
 app.chat_room_service = ChatRoomService(app.config)
 app.chat_service = ChatService(app.config)
+app.social_login = SocialLogin(app.config, sio)
 
-sio = socketio.AsyncServer(async_mode="sanic", cors_allowed_origins=[])
-sio.attach(app)
-sio.register_namespace(ChatSocketService("/v1/chat", app.config))
 initialize_cors(app)
 
 
