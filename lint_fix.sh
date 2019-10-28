@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 poetry run black .
 poetry run isort -y
-poetry export -f requirements.txt > requirements.txt
+poetry export --without-hashes -f requirements.txt > requirements.txt
