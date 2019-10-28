@@ -21,7 +21,7 @@ from src.database import (
     User,
     session_scope,
 )
-from src.email import EmailService
+from src.email_service import EmailService
 from src.exceptions import (
     ResourceNotFoundException,
     ResourceNotOwnedException,
