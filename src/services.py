@@ -473,7 +473,6 @@ def serialize_chat(chat_room_result, chat_result, buyer, seller, user_id):
         (seller, buyer) if seller.get("id") == user_id else (buyer, seller)
     )
     return {
-        "dealer_name": dealer.get("full_name"),
         "dealer_id": dealer.get("id"),
         "created_at": datetime.timestamp(chat_result.get("created_at")),
         "updated_at": datetime.timestamp(chat_result.get("updated_at")),
@@ -615,6 +614,24 @@ class ChatRoomService(DefaultService):
                     )
                 )
         return sorted(data, key=lambda item: item["created_at"], reverse=True)
+
+    def get_other_party_details(self, chat_room_id, user_id):
+        with session_scope() as session:
+            chat_room = session.query(self.ChatRoom).get(chat_room_id).asdict()
+
+        if not chat_room["is_revealed"]:
+            raise ResourceNotOwnedException("Other party has not revealed.")
+
+        if chat_room["seller_id"] == user_id:
+            other_party_user_id = chat_room["buyer_id"]
+        elif chat_room["buyer_id"] == user_id:
+            other_party_user_id = chat_room["seller_id"]
+        else:
+            raise ResourceNotOwnedException("Wrong user.")
+
+        with session_scope() as session:
+            user = session.query(self.User).get(other_party_user_id).asdict()
+            return {k: user[k] for k in ["email", "full_name"]}
 
 
 class SocialLogin(DefaultService):
