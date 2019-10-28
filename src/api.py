@@ -166,13 +166,6 @@ async def ban_user(request, user):
     )
 
 
-@blueprint.post("/match/<token>")
-async def run_matches(request, token):
-    if token != request.app.config["TEMPORIZE_TOKEN"]:
-        return json(None)
-    return json(request.app.match_service.run_matches(token))
-
-
 @blueprint.get("/linkedin/auth")
 async def linkedin_auth(request):
     socket_id = request.args.get("socketId")

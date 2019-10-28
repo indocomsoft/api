@@ -98,9 +98,8 @@ def test_create_order__add_new_round():
         sell_order_id = sell_order_service.create_order(**sell_order_params)["id"]
     with patch("src.services.RoundService.get_active", return_value=None), patch(
         "src.services.RoundService.should_round_start", return_value=True
-    ), patch("src.services.RoundService._schedule_event") as mock:
+    ):
         sell_order_id2 = sell_order_service.create_order(**sell_order_params)["id"]
-        mock.assert_called_once()
 
     with session_scope() as session:
         sell_order = session.query(SellOrder).get(sell_order_id).asdict()
