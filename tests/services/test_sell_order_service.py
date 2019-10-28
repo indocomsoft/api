@@ -81,8 +81,10 @@ def test_create_order__authorized():
 
 
 def test_create_order__add_new_round():
-    user_id = create_user()["id"]
+    user = create_user()
     security_id = create_security()["id"]
+
+    user_id = user["id"]
 
     sell_order_params = {
         "user_id": user_id,
@@ -90,7 +92,7 @@ def test_create_order__add_new_round():
         "price": 30,
         "security_id": security_id,
     }
-    create_buy_order(round_id=None)
+    create_buy_order(round_id=None, user_id=user_id)
 
     with patch("src.services.RoundService.get_active", return_value=None), patch(
         "src.services.RoundService.should_round_start", return_value=False
@@ -98,8 +100,9 @@ def test_create_order__add_new_round():
         sell_order_id = sell_order_service.create_order(**sell_order_params)["id"]
     with patch("src.services.RoundService.get_active", return_value=None), patch(
         "src.services.RoundService.should_round_start", return_value=True
-    ):
+    ), patch("src.services.EmailService.send_email") as mock:
         sell_order_id2 = sell_order_service.create_order(**sell_order_params)["id"]
+        mock.assert_called_once_with(bcc_list=[user["email"]], template="round_opened")
 
     with session_scope() as session:
         sell_order = session.query(SellOrder).get(sell_order_id).asdict()
