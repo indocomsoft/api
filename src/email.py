@@ -1,3 +1,5 @@
+import json
+
 import requests
 
 EMAIL_TEMPLATE = {
@@ -17,14 +19,15 @@ class EmailService:
     def __init__(self, config):
         self.config = config
 
-    def send_email(self, bcc_list, template):
+    def send_email(self, emails, template):
         data = EMAIL_TEMPLATE[template]
         return requests.post(
             f"{self.config['MAILGUN_API_BASE_URL']}/messages",
             auth=("api", self.config["MAILGUN_API_KEY"]),
             data={
                 "from": "Acquity <noreply@acquity.io>",
-                "bcc": bcc_list,
+                "to": emails,
+                "recipient-variables": json.dumps({email: {} for email in emails}),
                 "subject": data["subject"],
                 "text": data["text"],
             },
