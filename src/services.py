@@ -412,12 +412,14 @@ class MatchService(DefaultService):
         SellOrder=SellOrder,
         Match=Match,
         BannedPair=BannedPair,
+        ChatRoom=ChatRoom,
     ):
         super().__init__(config)
         self.BuyOrder = BuyOrder
         self.SellOrder = SellOrder
         self.Match = Match
         self.BannedPair = BannedPair
+        self.ChatRoom = ChatRoom
 
     def run_matches(self):
         round_id = RoundService(self.config).get_active()["id"]
@@ -440,12 +442,23 @@ class MatchService(DefaultService):
 
         match_results = match_buyers_and_sellers(buy_orders, sell_orders, banned_pairs)
 
+        buy_order_to_buyer_dict = {
+            order["id"]: order["user_id"] for order in buy_orders
+        }
+        sell_order_to_seller_dict = {
+            order["id"]: order["user_id"] for order in sell_orders
+        }
+
         with session_scope() as session:
             for buy_order_id, sell_order_id in match_results:
                 match = self.Match(
                     buy_order_id=buy_order_id, sell_order_id=sell_order_id
                 )
-                session.add(match)
+                chat_room = self.ChatRoom(
+                    seller_id=sell_order_to_seller_dict[sell_order_id],
+                    buyer_id=buy_order_to_buyer_dict[buy_order_id],
+                )
+                session.add_all([match, chat_room])
 
             session.query(Round).get(round_id).is_concluded = True
 
