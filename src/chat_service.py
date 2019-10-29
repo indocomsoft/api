@@ -9,6 +9,7 @@ class ChatSocketService(socketio.AsyncNamespace):
         super().__init__(namespace)
         self.chat_service = ChatService(config)
         self.chat_room_service = ChatRoomService(config)
+        self.config = config
 
     async def authenticate(self, encoded_token):
         decoded_token = jwt.decode(
