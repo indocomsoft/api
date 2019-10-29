@@ -118,9 +118,7 @@ def test_create_order__add_new_round():
             **sell_order_params, scheduler=SchedulerMock()
         )["id"]
 
-        email_mock.assert_called_once_with(
-            bcc_list=[user["email"]], template="round_opened"
-        )
+        email_mock.assert_called_once_with([user["email"]], template="round_opened")
 
     scheduler_args = scheduler_mock.call_args
     assert scheduler_args[0][1] == "date"

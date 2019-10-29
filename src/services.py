@@ -392,9 +392,7 @@ class RoundService:
                 buy_order.round_id = str(new_round.id)
 
             emails = [user.email for user in session.query(User).all()]
-            EmailService(self.config).send_email(
-                bcc_list=emails, template="round_opened"
-            )
+            EmailService(self.config).send_email(emails, template="round_opened")
 
         if scheduler is not None:
             scheduler.add_event(
