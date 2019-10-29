@@ -1,11 +1,12 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+from apscheduler.schedulers.base import BaseScheduler
 
 from src.config import APP_CONFIG
-from src.database import BuyOrder, Security, SellOrder, User, session_scope
+from src.database import BuyOrder, Round, Security, SellOrder, User, session_scope
 from src.exceptions import ResourceNotOwnedException, UnauthorizedException
-from src.services import SellOrderService
+from src.services import MatchService, SellOrderService
 from tests.fixtures import (
     create_buy_order,
     create_security,
@@ -72,7 +73,9 @@ def test_create_order__authorized():
     with patch("src.services.RoundService.get_active", return_value=None), patch(
         "src.services.RoundService.should_round_start", return_value=False
     ):
-        sell_order_id = sell_order_service.create_order(**sell_order_params)["id"]
+        sell_order_id = sell_order_service.create_order(
+            **sell_order_params, scheduler=None
+        )["id"]
 
     with session_scope() as session:
         sell_order = session.query(SellOrder).get(sell_order_id).asdict()
@@ -97,14 +100,34 @@ def test_create_order__add_new_round():
     with patch("src.services.RoundService.get_active", return_value=None), patch(
         "src.services.RoundService.should_round_start", return_value=False
     ):
-        sell_order_id = sell_order_service.create_order(**sell_order_params)["id"]
+        sell_order_id = sell_order_service.create_order(
+            **sell_order_params, scheduler=None
+        )["id"]
+
     with patch("src.services.RoundService.get_active", return_value=None), patch(
         "src.services.RoundService.should_round_start", return_value=True
-    ), patch("src.services.EmailService.send_email") as mock:
-        sell_order_id2 = sell_order_service.create_order(**sell_order_params)["id"]
-        mock.assert_called_once_with(bcc_list=[user["email"]], template="round_opened")
+    ), patch("src.services.EmailService.send_email") as email_mock:
+        scheduler_mock = MagicMock()
+
+        class SchedulerMock(BaseScheduler):
+            shutdown = MagicMock()
+            wakeup = MagicMock()
+            add_event = scheduler_mock
+
+        sell_order_id2 = sell_order_service.create_order(
+            **sell_order_params, scheduler=SchedulerMock()
+        )["id"]
+
+        email_mock.assert_called_once_with(
+            bcc_list=[user["email"]], template="round_opened"
+        )
+
+    scheduler_args = scheduler_mock.call_args
+    assert scheduler_args[0][1] == "date"
 
     with session_scope() as session:
+        assert scheduler_args[1]["run_date"] == session.query(Round).one().end_time
+
         sell_order = session.query(SellOrder).get(sell_order_id).asdict()
         sell_order2 = session.query(SellOrder).get(sell_order_id2).asdict()
         buy_order = session.query(BuyOrder).one().asdict()
@@ -122,7 +145,11 @@ def test_create_order__unauthorized():
 
     with pytest.raises(UnauthorizedException):
         sell_order_service.create_order(
-            user_id=user_id, number_of_shares=20, price=30, security_id=security_id
+            user_id=user_id,
+            number_of_shares=20,
+            price=30,
+            security_id=security_id,
+            scheduler=None,
         )
 
 
@@ -138,9 +165,9 @@ def test_create_order__limit_reached():
     }
 
     for _ in range(APP_CONFIG["ACQUITY_SELL_ORDER_PER_ROUND_LIMIT"]):
-        sell_order_service.create_order(**sell_order_params)
+        sell_order_service.create_order(**sell_order_params, scheduler=None)
     with pytest.raises(UnauthorizedException):
-        sell_order_service.create_order(**sell_order_params)
+        sell_order_service.create_order(**sell_order_params, scheduler=None)
 
 
 def test_edit_order():

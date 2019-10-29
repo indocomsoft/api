@@ -73,7 +73,9 @@ async def get_sell_order_by_id(request, user, id):
 @expects_json_object
 async def create_sell_order(request, user):
     return json(
-        request.app.sell_order_service.create_order(**request.json, user_id=user["id"])
+        request.app.sell_order_service.create_order(
+            **request.json, user_id=user["id"], scheduler=request.app.scheduler
+        )
     )
 
 

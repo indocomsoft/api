@@ -1,8 +1,11 @@
 from functools import wraps
 
-from cerberus import Validator
+from apscheduler.schedulers.base import BaseScheduler
+from cerberus import TypeDefinition, Validator
 
 from src.exceptions import InvalidRequestException
+
+Validator.types_mapping["scheduler"] = TypeDefinition("scheduler", (BaseScheduler,), ())
 
 
 def validate_input(schema):
@@ -38,11 +41,18 @@ CREATE_USER_SCHEMA = {
     "password": {"type": "string", "minlength": 6},
 }
 INVITE_SCHEMA = {"inviter_id": UUID_RULE, "invited_id": UUID_RULE}
-CREATE_ORDER_SCHEMA = {
+CREATE_BUY_ORDER_SCHEMA = {
     "user_id": UUID_RULE,
     "number_of_shares": NONNEGATIVE_NUMBER_RULE,
     "price": NONNEGATIVE_NUMBER_RULE,
     "security_id": UUID_RULE,
+}
+CREATE_SELL_ORDER_SCHEMA = {
+    "user_id": UUID_RULE,
+    "number_of_shares": NONNEGATIVE_NUMBER_RULE,
+    "price": NONNEGATIVE_NUMBER_RULE,
+    "security_id": UUID_RULE,
+    "scheduler": {"type": "scheduler", "nullable": True},
 }
 EDIT_ORDER_SCHEMA = {
     "id": UUID_RULE,

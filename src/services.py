@@ -29,7 +29,8 @@ from src.exceptions import (
 )
 from src.match import match_buyers_and_sellers
 from src.schemata import (
-    CREATE_ORDER_SCHEMA,
+    CREATE_BUY_ORDER_SCHEMA,
+    CREATE_SELL_ORDER_SCHEMA,
     CREATE_USER_SCHEMA,
     DELETE_ORDER_SCHEMA,
     EDIT_MARKET_PRICE_SCHEMA,
@@ -152,8 +153,8 @@ class SellOrderService:
     def __init__(self, config):
         self.config = config
 
-    @validate_input(CREATE_ORDER_SCHEMA)
-    def create_order(self, user_id, number_of_shares, price, security_id):
+    @validate_input(CREATE_SELL_ORDER_SCHEMA)
+    def create_order(self, user_id, number_of_shares, price, security_id, scheduler):
         with session_scope() as session:
             user = session.query(User).get(user_id)
             if user is None:
@@ -179,7 +180,7 @@ class SellOrderService:
                 session.add(sell_order)
                 session.commit()
                 if RoundService(self.config).should_round_start():
-                    RoundService(self.config).create_new_round_and_set_orders()
+                    RoundService(self.config).create_new_round_and_set_orders(scheduler)
             else:
                 sell_order.round_id = active_round["id"]
                 session.add(sell_order)
@@ -237,7 +238,7 @@ class BuyOrderService:
     def __init__(self, config):
         self.config = config
 
-    @validate_input(CREATE_ORDER_SCHEMA)
+    @validate_input(CREATE_BUY_ORDER_SCHEMA)
     def create_order(self, user_id, number_of_shares, price, security_id):
         with session_scope() as session:
             user = session.query(User).get(user_id)
@@ -378,7 +379,7 @@ class RoundService:
                 >= self.config["ACQUITY_ROUND_START_TOTAL_SELL_SHARES_CUTOFF"]
             )
 
-    def create_new_round_and_set_orders(self):
+    def create_new_round_and_set_orders(self, scheduler):
         with session_scope() as session:
             end_time = datetime.now(timezone.utc) + self.config["ACQUITY_ROUND_LENGTH"]
             new_round = Round(end_time=end_time, is_concluded=False)
@@ -393,6 +394,11 @@ class RoundService:
             emails = [user.email for user in session.query(User).all()]
             EmailService(self.config).send_email(
                 bcc_list=emails, template="round_opened"
+            )
+
+        if scheduler is not None:
+            scheduler.add_event(
+                MatchService(self.config).run_matches, "date", run_date=end_time
             )
 
 

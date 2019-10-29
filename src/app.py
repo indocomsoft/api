@@ -12,6 +12,7 @@ from src.api import blueprint, user_login
 from src.chat_service import ChatSocketService
 from src.config import APP_CONFIG
 from src.exceptions import AcquityException
+from src.scheduler import scheduler
 from src.services import (
     BannedPairService,
     BuyOrderService,
@@ -96,6 +97,13 @@ async def error_handler(request, exception):
 
 
 app.error_handler.add(Exception, error_handler)
+
+
+@app.listener("after_server_start")
+async def start_scheduler(app, loop):
+    scheduler.configure(event_loop=loop)
+    app.scheduler = scheduler
+    scheduler.start()
 
 
 if __name__ == "__main__":

@@ -11,10 +11,10 @@ if ACQUITY_ENV == "DEVELOPMENT":
     DEFAULT_DATABASE_URL = "postgresql://acquity:acquity@localhost/acquity"
 elif ACQUITY_ENV == "TEST":
     DEFAULT_DATABASE_URL = "postgresql://acquity:acquity@localhost/acquity_test"
+DATABASE_URL = getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
 
 APP_CONFIG = {
-    "DATABASE_URL": getenv("DATABASE_URL", DEFAULT_DATABASE_URL),
-    "CORS_AUTOMATIC_OPTIONS": True,
+    "DATABASE_URL": DATABASE_URL,
     "HOST": getenv("HOST"),
     "PORT": getenv("PORT", 8000),
     "SANIC_JWT_EXPIRATION_DELTA": 2 * 24 * 3600,  # 2 days
@@ -29,7 +29,9 @@ APP_CONFIG = {
     "ACQUITY_ROUND_LENGTH": timedelta(weeks=1),
     "ACQUITY_SELL_ORDER_PER_ROUND_LIMIT": 2,
     "ACQUITY_BUY_ORDER_PER_ROUND_LIMIT": 1,
+    "CORS_AUTOMATIC_OPTIONS": True,
     "CORS_SUPPORTS_CREDENTIALS": True,
     "MAILGUN_API_KEY": getenv("MAILGUN_API_KEY"),
     "MAILGUN_API_BASE_URL": getenv("MAILGUN_API_BASE_URL"),
+    "apscheduler.jobstores.default": {"type": "sqlalchemy", "url": DATABASE_URL},
 }
