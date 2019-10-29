@@ -112,7 +112,7 @@ def test_create_order__add_new_round():
         class SchedulerMock(BaseScheduler):
             shutdown = MagicMock()
             wakeup = MagicMock()
-            add_event = scheduler_mock
+            add_job = scheduler_mock
 
         sell_order_id2 = sell_order_service.create_order(
             **sell_order_params, scheduler=SchedulerMock()

@@ -391,7 +391,7 @@ class RoundService:
             EmailService(self.config).send_email(emails, template="round_opened")
 
         if scheduler is not None:
-            scheduler.add_event(
+            scheduler.add_job(
                 MatchService(self.config).run_matches, "date", run_date=end_time
             )
 
