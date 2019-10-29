@@ -51,3 +51,8 @@ EDIT_ORDER_SCHEMA = {
     "new_price": OPTIONAL_NONNEGATIVE_NUMBER_RULE,
 }
 DELETE_ORDER_SCHEMA = {"id": UUID_RULE, "subject_id": UUID_RULE}
+EDIT_MARKET_PRICE_SCHEMA = {
+    "id": UUID_RULE,
+    "subject_id": UUID_RULE,
+    "market_price": {"type": "number", "min": 0, "nullable": True},
+}

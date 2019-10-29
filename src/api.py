@@ -143,6 +143,14 @@ async def get_all_securities(request):
     return json(request.app.security_service.get_all())
 
 
+@blueprint.patch("/security/<id>")
+@auth_required
+async def edit_security_market_price(request, user, id):
+    return json(
+        request.app.edit_market_price(**request.json, id=id, subject_id=user["id"])
+    )
+
+
 @blueprint.get("/round/")
 async def get_all_rounds(request):
     return json(request.app.round_service.get_all())

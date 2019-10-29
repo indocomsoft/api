@@ -33,7 +33,7 @@ def attributes_for_user(id="", **kwargs):
 
 
 def attributes_for_security(id="", **kwargs):
-    return {"name": f"a{id}", **kwargs}
+    return {"name": f"a{id}", "market_price": 6.35, **kwargs}
 
 
 def attributes_for_sell_order(id=0, **kwargs):

@@ -78,6 +78,7 @@ class Security(Base):
     __tablename__ = "securities"
 
     name = Column(String, nullable=False, unique=True)
+    market_price = Column(Float)
 
     sell_orders = relationship("SellOrder", back_populates="security")
     buy_orders = relationship("BuyOrder", back_populates="security")

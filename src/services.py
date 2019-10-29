@@ -32,6 +32,7 @@ from src.schemata import (
     CREATE_ORDER_SCHEMA,
     CREATE_USER_SCHEMA,
     DELETE_ORDER_SCHEMA,
+    EDIT_MARKET_PRICE_SCHEMA,
     EDIT_ORDER_SCHEMA,
     INVITE_SCHEMA,
     USER_AUTH_SCHEMA,
@@ -316,6 +317,23 @@ class SecurityService:
     def get_all(self):
         with session_scope() as session:
             return [sec.asdict() for sec in session.query(Security).all()]
+
+    @validate_input(EDIT_MARKET_PRICE_SCHEMA)
+    def edit_market_price(self, id, subject_id, market_price):
+        with session_scope() as session:
+            security = session.query(Security).get(id)
+            if security is None:
+                raise ResourceNotFoundException()
+
+            subject = session.query(User).get(subject_id)
+            if not subject.is_committee:
+                raise UnauthorizedException(
+                    "You need to be a committee of this security."
+                )
+
+            security.market_price = market_price
+            session.commit()
+            return security.asdict()
 
 
 class RoundService:
