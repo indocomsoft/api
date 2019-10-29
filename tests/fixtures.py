@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from src.database import (
+    BannedPair,
     BuyOrder,
     Match,
     Round,
@@ -130,3 +131,19 @@ def create_round(id=0, **kwargs):
         session.add(round)
         session.commit()
         return round.asdict()
+
+
+def create_banned_pair(id=0, **kwargs):
+    with session_scope() as session:
+        banned_pair = BannedPair(
+            **combine_dicts(
+                kwargs,
+                {
+                    "buyer_id": lambda: create_user(str(id) + "0")["id"],
+                    "seller_id": lambda: create_user(str(id) + "1")["id"],
+                },
+            )
+        )
+        session.add(banned_pair)
+        session.commit()
+        return banned_pair.asdict()

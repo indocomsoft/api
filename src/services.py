@@ -159,8 +159,6 @@ class SellOrderService:
             user = session.query(User).get(user_id)
             if user is None:
                 raise ResourceNotFoundException()
-            if not user.can_sell:
-                raise UnauthorizedException("This user cannot sell securities.")
 
             sell_order_count = (
                 session.query(SellOrder).filter_by(user_id=user_id).count()
@@ -244,8 +242,6 @@ class BuyOrderService:
             user = session.query(User).get(user_id)
             if user is None:
                 raise ResourceNotFoundException()
-            if not user.can_buy:
-                raise UnauthorizedException("This user cannot buy securities.")
 
             buy_order_count = session.query(BuyOrder).filter_by(user_id=user_id).count()
             if buy_order_count >= self.config["ACQUITY_BUY_ORDER_PER_ROUND_LIMIT"]:
@@ -426,11 +422,17 @@ class MatchService:
         with session_scope() as session:
             buy_orders = [
                 b.asdict()
-                for b in session.query(BuyOrder).filter_by(round_id=round_id).all()
+                for b in session.query(BuyOrder)
+                .join(User, User.id == BuyOrder.user_id)
+                .filter(BuyOrder.round_id == round_id, User.can_buy)
+                .all()
             ]
             sell_orders = [
                 s.asdict()
-                for s in session.query(SellOrder).filter_by(round_id=round_id).all()
+                for s in session.query(SellOrder)
+                .join(User, User.id == SellOrder.user_id)
+                .filter(SellOrder.round_id == round_id, User.can_sell)
+                .all()
             ]
             banned_pairs = [
                 (bp.buyer_id, bp.seller_id) for bp in session.query(BannedPair).all()

@@ -101,10 +101,9 @@ def test_create_order__unauthorized():
     user_id = create_user(can_buy=False)["id"]
     security_id = create_security()["id"]
 
-    with pytest.raises(UnauthorizedException):
-        buy_order_service.create_order(
-            user_id=user_id, number_of_shares=20, price=30, security_id=security_id
-        )
+    buy_order_service.create_order(
+        user_id=user_id, number_of_shares=20, price=30, security_id=security_id
+    )
 
 
 def test_create_order__limit_reached():
