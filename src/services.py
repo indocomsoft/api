@@ -395,6 +395,10 @@ class RoundService:
                 MatchService(self.config).run_matches, "date", run_date=end_time
             )
 
+    @validate_input({"security_id": UUID_RULE})
+    def get_previous_round_statistics(self, security_id):
+        return None
+
 
 class MatchService:
     def __init__(self, config):

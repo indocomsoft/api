@@ -163,6 +163,13 @@ async def get_active_round(request):
     return json(request.app.round_service.get_active())
 
 
+@blueprint.get("/round/previous/statistics/<security_id>")
+async def get_active_round(request, security_id):
+    return json(
+        request.app.round_service.get_previous_round_statistics(security_id=security_id)
+    )
+
+
 @blueprint.post("/ban/")
 @auth_required
 @expects_json_object
