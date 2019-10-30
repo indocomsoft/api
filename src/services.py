@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime, timezone
 from operator import itemgetter
 from urllib.parse import quote
@@ -442,7 +443,20 @@ class MatchService:
                 (bp.buyer_id, bp.seller_id) for bp in session.query(BannedPair).all()
             ]
 
-        return buy_orders, sell_orders, banned_pairs
+        return buy_orders, self._double_sell_orders(sell_orders), banned_pairs
+
+    def _double_sell_orders(self, sell_orders):
+        seller_counts = defaultdict(lambda: 0)
+        for sell_order in sell_orders:
+            seller_counts[sell_order["user_id"]] += 1
+
+        new_sell_orders = []
+        for sell_order in sell_orders:
+            new_sell_orders.append(sell_order)
+            if seller_counts[sell_order["user_id"]] == 1:
+                new_sell_orders.append(sell_order)
+
+        return new_sell_orders
 
     def _add_db_objects(
         self,

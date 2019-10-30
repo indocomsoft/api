@@ -256,6 +256,25 @@ PRICE_MISMATCH_CASE = (
     ]),
 )
 
+DUPLICATE_IDS_CASE = (
+    [
+        {"id": "b1", "user_id": "X", "number_of_shares": 20, "price": 5},
+        {"id": "b2", "user_id": "X", "number_of_shares": 15, "price": 6},
+        {"id": "b3", "user_id": "X", "number_of_shares": 30, "price": 7},
+    ],
+    [
+        {"id": "s1", "user_id": "X", "number_of_shares": 20, "price": 5},
+        {"id": "s1", "user_id": "X", "number_of_shares": 15, "price": 6},
+        {"id": "s2", "user_id": "X", "number_of_shares": 30, "price": 7},
+    ],
+    [],
+    set([
+        ("b1", "s1"),
+        ("b2", "s1"),
+        ("b3", "s2"),
+    ]),
+)
+
 BANNED_PAIR_NO_RESULT_CASE = (
     [
         {"id": "b1", "user_id": "A", "number_of_shares": 20, "price": 6},
@@ -297,6 +316,7 @@ TEST_CASES = [
     POPULATED_MARKET_CASE,
     NEAREST_PRICE_BRACKET_CASE,
     PRICE_MISMATCH_CASE,
+    DUPLICATE_IDS_CASE,
     BANNED_PAIR_NO_RESULT_CASE,
     BANNED_PAIR_OTHER_PAIR_MATCH_RESULT_CASE,
 ]

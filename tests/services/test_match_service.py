@@ -138,3 +138,40 @@ def test_run_matches__banned_pairs():
             [sell_user_id, sell_user2["id"]]
         )
         assert mock_match.call_args[0][2] == [(buy_user_id, sell_user_id)]
+
+
+def test_run_matches__double_sell_orders():
+    round = create_round()
+
+    sell_user = create_user("3")
+    sell_user2 = create_user("4")
+
+    sell_order1 = create_sell_order("3", round_id=round["id"], user_id=sell_user["id"])
+    sell_order21 = create_sell_order(
+        "4", round_id=round["id"], user_id=sell_user2["id"]
+    )
+    sell_order22 = create_sell_order(
+        "5", round_id=round["id"], user_id=sell_user2["id"]
+    )
+
+    with patch("src.services.match_buyers_and_sellers") as mock_match, patch(
+        "src.services.RoundService.get_active", return_value=round
+    ), patch("src.services.EmailService.send_email"):
+        match_service.run_matches()
+
+        assert (
+            len([o for o in mock_match.call_args[0][1] if o["id"] == sell_order1["id"]])
+            == 2
+        )
+        assert (
+            len(
+                [o for o in mock_match.call_args[0][1] if o["id"] == sell_order21["id"]]
+            )
+            == 1
+        )
+        assert (
+            len(
+                [o for o in mock_match.call_args[0][1] if o["id"] == sell_order22["id"]]
+            )
+            == 1
+        )
