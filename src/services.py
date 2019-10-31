@@ -20,10 +20,12 @@ from src.database import (
     Security,
     SellOrder,
     User,
+    UserRequest,
     session_scope,
 )
 from src.email_service import EmailService
 from src.exceptions import (
+    InvisibleUnauthorizedException,
     ResourceNotFoundException,
     ResourceNotOwnedException,
     UnauthorizedException,
@@ -63,7 +65,6 @@ class UserService:
             session.commit()
 
             result = user.asdict()
-        result.pop("hashed_password")
         return result
 
     @validate_input({"user_id": UUID_RULE})
@@ -76,7 +77,6 @@ class UserService:
             user.can_buy = True
             session.commit()
             result = user.asdict()
-        result.pop("hashed_password")
         return result
 
     @validate_input(INVITE_SCHEMA)
@@ -94,7 +94,6 @@ class UserService:
             session.commit()
 
             result = invited.asdict()
-        result.pop("hashed_password")
         return result
 
     @validate_input(INVITE_SCHEMA)
@@ -112,7 +111,6 @@ class UserService:
             session.commit()
 
             result = invited.asdict()
-        result.pop("hashed_password")
         return result
 
     @validate_input(USER_AUTH_SCHEMA)
@@ -135,7 +133,6 @@ class UserService:
             if user is None:
                 raise NoResultFound
             user_dict = user.asdict()
-        user_dict.pop("hashed_password")
         return user_dict
 
     def get_user_by_email(self, email):
@@ -146,7 +143,6 @@ class UserService:
             if user is None:
                 raise NoResultFound
             user_dict = user.asdict()
-        user_dict.pop("hashed_password")
         return user_dict
 
 
@@ -736,3 +732,50 @@ class SocialLogin:
             headers={"Authorization": f"Bearer {token}"},
         ).json()
         return email.get("elements")[0].get("handle~").get("emailAddress")
+
+
+class UserRequestService:
+    def __init__(self, config):
+        self.config = config
+
+    @validate_input({"subject_id": UUID_RULE})
+    def get_buy_requests(self, subject_id):
+        with session_scope() as session:
+            if not session.query(User).get(subject_id).is_committee:
+                raise InvisibleUnauthorizedException("Not committee")
+
+            buy_requests = session.query(UserRequest).filter_by(is_buy=True).all()
+            return [buy_request.asdict() for buy_request in buy_requests]
+
+    @validate_input({"subject_id": UUID_RULE})
+    def get_sell_requests(self, subject_id):
+        with session_scope() as session:
+            if not session.query(User).get(subject_id).is_committee:
+                raise InvisibleUnauthorizedException("Not committee")
+
+            sell_requests = session.query(BuyOrder).filter_by(is_buy=False).all()
+            return [sell_request.asdict() for sell_request in sell_requests]
+
+    @validate_input({"request_id": UUID_RULE, "subject_id": UUID_RULE})
+    def approve_request(self, request_id, subject_id):
+        with session_scope() as session:
+            if not session.query(User).get(subject_id).is_committee:
+                raise InvisibleUnauthorizedException("Not committee")
+
+            request = session.query(UserRequest).get(request_id)
+            user = session.query(User).get(request.user_id)
+
+            if request.is_buy:
+                user.can_buy = True
+            else:
+                user.can_sell = False
+
+            request.delete()
+
+    @validate_input({"request_id": UUID_RULE, "subject_id": UUID_RULE})
+    def reject_request(self, request_id, subject_id):
+        with session_scope() as session:
+            if not session.query(User).get(subject_id).is_committee:
+                raise InvisibleUnauthorizedException("Not committee")
+
+            session.query(UserRequest).get(request_id).delete()

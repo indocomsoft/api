@@ -23,3 +23,7 @@ class ResourceNotOwnedException(AcquityException):
 
 class ResourceNotFoundException(AcquityException):
     status_code = 404
+
+
+class InvisibleUnauthorizedException(AcquityException):
+    status_code = 404

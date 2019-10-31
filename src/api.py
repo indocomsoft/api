@@ -192,3 +192,39 @@ async def linkedin_auth(request):
     state = request.args.get("state")
     await request.app.social_login.authenticate(code=code, socket_id=state)
     return json({"data": "success"})
+
+
+@blueprint.get("/requests/buy/")
+@auth_required
+async def get_buy_requests(request, user):
+    return json(
+        request.app.user_request_service.get_buy_requests(subject_id=user["id"])
+    )
+
+
+@blueprint.get("/requests/sell/")
+@auth_required
+async def get_sell_requests(request, user):
+    return json(
+        request.app.user_request_service.get_sell_requests(subject_id=user["id"])
+    )
+
+
+@blueprint.post("/requests/<id>")
+@auth_required
+async def approve_request(request, id, user):
+    return json(
+        request.app.user_request_service.approve_request(
+            request_id=id, subject_id=user["id"]
+        )
+    )
+
+
+@blueprint.delete("/requests/<id>")
+@auth_required
+async def reject_request(request, id, user):
+    return json(
+        request.app.user_request_service.reject_request(
+            request_id=id, subject_id=user["id"]
+        )
+    )

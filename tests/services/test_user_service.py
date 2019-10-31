@@ -16,27 +16,19 @@ def test_create():
     user_service.create(email="a@a", password="123456", full_name="Ben")
 
     with session_scope() as session:
-        users = [u.asdict() for u in session.query(User).all()]
+        user = session.query(User).one()
+        assert user.hashed_password == "123456"
+        user = user.asdict()
 
-    assert len(users) == 1
     assert_dict_in(
-        {
-            "email": "a@a",
-            "hashed_password": "123456",
-            "full_name": "Ben",
-            "can_buy": False,
-            "can_sell": False,
-        },
-        users[0],
+        {"email": "a@a", "full_name": "Ben", "can_buy": False, "can_sell": False}, user
     )
 
 
 def test_authenticate():
-    user_params = create_user()
+    user_params = create_user(hashed_password="abcdef")
 
-    user = user_service.authenticate(
-        email=user_params["email"], password=user_params["hashed_password"]
-    )
+    user = user_service.authenticate(email=user_params["email"], password="abcdef")
     assert user_params == user
 
 
@@ -77,15 +69,14 @@ def test_invite_to_be_buyer__authorized():
 
 
 def test_get_user():
-    user_params = create_user()
+    user_params = create_user(hashed_password="abcdef")
 
-    user_id = user_service.authenticate(
-        email=user_params["email"], password=user_params["hashed_password"]
-    )["id"]
+    user_id = user_service.authenticate(email=user_params["email"], password="abcdef")[
+        "id"
+    ]
 
     user = user_service.get_user(id=user_id)
 
-    user_params.pop("hashed_password")
     assert user_params == user
 
     with pytest.raises(ResourceNotFoundException):
