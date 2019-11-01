@@ -27,3 +27,11 @@ class ResourceNotFoundException(AcquityException):
 
 class InvisibleUnauthorizedException(AcquityException):
     status_code = 404
+
+
+class InvalidAuthorizationTokenException(AcquityException):
+    status_code = 400
+
+
+class UserProfileNotFoundException(AcquityException):
+    status_code = 401

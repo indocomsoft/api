@@ -3,7 +3,7 @@ from functools import wraps
 from sanic import Blueprint, response
 from sanic.response import json
 
-from src.exceptions import AcquityException
+from src.exceptions import AcquityException, InvalidAuthorizationTokenException
 from src.utils import expects_json_object
 
 blueprint = Blueprint("root", version="v1")
@@ -15,7 +15,7 @@ def auth_required(f):
         PREFIX = "Bearer "
         header = request.headers["Authorization"]
         if not header.startswith(PREFIX):
-            raise AcquityException("Invalid Token", 400)
+            raise InvalidAuthorizationTokenException("Invalid Authorization Bearer")
         token = header[len(PREFIX) :]
         linkedin_user = request.app.linkedin_login.get_linkedin_user(token=token)
         user = request.app.user_service.get_user_by_linkedin_id(
