@@ -100,6 +100,7 @@ class User(Base):
                         item = "NO"
 
                 d[col] = item
+                continue
 
             item = getattr(self, col)
 

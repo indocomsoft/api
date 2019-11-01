@@ -27,8 +27,8 @@ def test_create():
         {
             "email": "a@a.io",
             "full_name": "Ben",
-            "can_buy": False,
-            "can_sell": False,
+            "can_buy": "NO",
+            "can_sell": "NO",
             "user_id": "testing",
             "provider": "linkedin",
             "display_image_url": None,
@@ -59,8 +59,8 @@ def test_create_if_user_exist():
         {
             "email": "a@a.io",
             "full_name": "Ben",
-            "can_buy": False,
-            "can_sell": False,
+            "can_buy": "NO",
+            "can_sell": "NO",
             "user_id": "testing",
             "provider": "linkedin",
             "display_image_url": "https://test.png",
