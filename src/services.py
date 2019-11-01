@@ -50,21 +50,26 @@ class UserService:
         self.config = config
         self.hasher = hasher
 
-    @validate_input(CREATE_USER_SCHEMA)
-    def create(self, email, password, full_name):
+    def create_if_not_exists(self, email, display_image_url, full_name, user_id):
         with session_scope() as session:
-            hashed_password = self.hasher.hash(password)
-            user = User(
-                email=email,
-                full_name=full_name,
-                hashed_password=hashed_password,
-                can_buy=False,
-                can_sell=False,
-            )
-            session.add(user)
-            session.commit()
-
-            result = user.asdict()
+            user = session.query(User).filter_by(user_id=user_id).one_or_none()
+            if user is None:
+                user = User(
+                    email=email,
+                    full_name=full_name,
+                    display_image_url=display_image_url,
+                    provider="linkedin",
+                    can_buy=False,
+                    can_sell=False,
+                    user_id=user_id,
+                )
+                session.add(user)
+                session.flush()
+                result = user.asdict()
+            else:
+                user.display_image_url = display_image_url
+                session.flush()
+                result = user.asdict()
         return result
 
     @validate_input({"user_id": UUID_RULE})
@@ -73,7 +78,6 @@ class UserService:
             user = session.query(User).get(user_id)
             if user is None:
                 raise ResourceNotFoundException()
-
             user.can_buy = True
             session.commit()
             result = user.asdict()
@@ -113,35 +117,20 @@ class UserService:
             result = invited.asdict()
         return result
 
-    @validate_input(USER_AUTH_SCHEMA)
-    def authenticate(self, email, password):
-        with session_scope() as session:
-            user = session.query(User).filter_by(email=email).one_or_none()
-            if user is None:
-                raise ResourceNotFoundException()
-            if self.hasher.verify(password, user.hashed_password):
-                return user.asdict()
-            else:
-                return None
-
     @validate_input({"id": UUID_RULE})
     def get_user(self, id):
         with session_scope() as session:
             user = session.query(User).get(id)
             if user is None:
                 raise ResourceNotFoundException()
-            if user is None:
-                raise NoResultFound
             user_dict = user.asdict()
         return user_dict
 
-    def get_user_by_email(self, email):
+    def get_user_by_linkedin_id(self, user_id):
         with session_scope() as session:
-            user = session.query(User).filter_by(email=email).one_or_none()
+            user = session.query(User).filter_by(user_id=user_id).one_or_none()
             if user is None:
-                raise InvalidRequestException("Linkedin email does not match")
-            if user is None:
-                raise NoResultFound
+                raise ResourceNotFoundException()
             user_dict = user.asdict()
         return user_dict
 
@@ -672,7 +661,7 @@ class ChatRoomService:
             return {k: user[k] for k in ["email", "full_name"]}
 
 
-class SocialLogin:
+class LinkedInLogin:
     def __init__(self, config, sio):
         self.config = config
         self.sio = sio
@@ -683,22 +672,25 @@ class SocialLogin:
         client_id = self.config.get("CLIENT_ID")
         response_type = "code"
         redirect_uri = f"{host}/v1/linkedin/auth/callback"
-        scope = "r_liteprofile%20r_emailaddress%20w_member_social"
+        scope = "r_liteprofile%20r_emailaddress%20w_member_social%20r_basicprofile"
         url = f"https://www.linkedin.com/oauth/v2/authorization?response_type={response_type}&client_id={client_id}&redirect_uri={redirect_uri}&scope={scope}&state={socket_id}"
         return url
 
     def join_room(self, socket_id):
         self.sio.enter_room(socket_id, "linkedin")
 
+    def get_linkedin_user(self, token):
+        user_profile = self.get_user_profile(token=token)
+        email = self.get_user_email(token=token)
+        return {**user_profile, "email": email}
+
     async def authenticate(self, code, socket_id):
         token = self.get_token(code=code)
-        full_name = self.get_user_profile(token=token)
-        email = self.get_user_email(token=token)
-        user = UserService(self.config).get_user_by_email(email=email)
-        user = UserService(self.config).activate_buy_privileges(user_id=user.get("id"))
-        user["created_at"] = user.get("created_at").timestamp()
-        user["updated_at"] = user.get("updated_at").timestamp()
-        await self.sio.emit("provider", user, namespace="/v1/", room=socket_id)
+        user = self.get_linkedin_user(token)
+        UserService(self.config).create_if_not_exists(**user)
+        await self.sio.emit(
+            "provider", {"access_token": token}, namespace="/v1/", room=socket_id
+        )
         self.sio.leave_room(socket_id, "linkedin")
 
     def get_token(self, code):
@@ -719,12 +711,28 @@ class SocialLogin:
 
     def get_user_profile(self, token):
         user_profile = requests.get(
-            "https://api.linkedin.com/v2/me",
+            "https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))",
             headers={"Authorization": f"Bearer {token}"},
         ).json()
-        first_name = user_profile.get("localizedFirstName")
-        last_name = user_profile.get("localizedLastName")
-        return {"full_name": f"{first_name} {last_name}"}
+        user_id = user_profile.get("id")
+        first_name = user_profile.get("firstName").get("localized").get("en_US")
+        last_name = user_profile.get("lastName").get("localized").get("en_US")
+        try:
+            display_image_url = (
+                user_profile.get("profilePicture")
+                .get("displayImage~")
+                .get("elements")[-1]
+                .get("identifiers")[0]
+                .get("identifier")
+            )
+        except AttributeError:
+            display_image_url = None
+
+        return {
+            "full_name": f"{first_name} {last_name}",
+            "display_image_url": display_image_url,
+            "user_id": user_id,
+        }
 
     def get_user_email(self, token):
         email = requests.get(

@@ -24,11 +24,13 @@ def combine_dicts(original, default_boxed):
 def attributes_for_user(id="", **kwargs):
     return {
         "email": f"a{id}@a",
-        "hashed_password": f"abcdef{id}",
+        "user_id": f"abcdef{id}",
         "full_name": f"a{id}",
+        "display_image_url": "https://loremflickr.com/320/240",
         "can_buy": True,
         "can_sell": True,
         "is_committee": True,
+        "provider": f"{id}",
         **kwargs,
     }
 

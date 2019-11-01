@@ -17,11 +17,6 @@ APP_CONFIG = {
     "DATABASE_URL": DATABASE_URL,
     "HOST": getenv("HOST"),
     "PORT": getenv("PORT", 8000),
-    "SANIC_JWT_EXPIRATION_DELTA": 2 * 24 * 3600,  # 2 days
-    "SANIC_JWT_USER_ID": "id",
-    "SANIC_JWT_SECRET": getenv(
-        "JWT_SECRET", "secret" if ACQUITY_ENV in ["DEVELOPMENT", "TEST"] else ""
-    ),
     "CLIENT_ID": getenv("CLIENT_ID"),
     "CLIENT_SECRET": getenv("CLIENT_SECRET"),
     "ACQUITY_ROUND_START_NUMBER_OF_SELLERS_CUTOFF": 2,
