@@ -8,12 +8,12 @@ class ChatSocketService(socketio.AsyncNamespace):
         super().__init__(namespace)
         self.chat_service = ChatService(config)
         self.chat_room_service = ChatRoomService(config)
-        self.linkedin_login = LinkedInLogin(config, sio)
+        self.linkedin_login = LinkedInLogin(config)
         self.user_service = UserService(config)
         self.config = config
 
     async def authenticate(self, token):
-        linkedin_user = self.linkedin_login.get_user_profile(token=token)
+        linkedin_user = self.linkedin_login._get_user_profile(token=token)
         user = self.user_service.get_user_by_linkedin_id(
             user_id=linkedin_user.get("user_id")
         )

@@ -59,3 +59,9 @@ EDIT_MARKET_PRICE_SCHEMA = {
     "subject_id": UUID_RULE,
     "market_price": {"type": "number", "min": 0, "nullable": True},
 }
+GET_AUTH_URL_SHCMEA = {"redirect_uri": {"type": "string"}}
+AUTHENTICATE_SCHEMA = {
+    "code": {"type": "string"},
+    "redirect_uri": {"type": "string"},
+    "is_buy": {"type": "boolean"},
+}
