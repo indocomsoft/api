@@ -635,7 +635,7 @@ class LinkedInLogin:
         return url
 
     def authenticate(self, code, is_buy):
-        token = self._get_token(code=code)
+        token = self._get_token(code=code, is_buy=is_buy)
         user = self._get_linkedin_user(token)
         UserService(self.config).create_if_not_exists(**user, is_buy=is_buy)
         return {"access_token": token}
