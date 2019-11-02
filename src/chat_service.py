@@ -19,21 +19,14 @@ class ChatSocketService(socketio.AsyncNamespace):
         self.offer_service = OfferService(config)
         self.config = config
 
-    def _debug(self, data):
-        print()
-        print(data)
-        print()
-
     async def on_req_testing(self, sid, data):
         await self.emit("res_testing", { "data": "hello world" })
 
     async def _authenticate(self, token):
         linkedin_user = self.linkedin_login._get_linkedin_user(token=token)
-        self._debug(linkedin_user) # TODO: remove
         user = self.user_service.get_user_by_linkedin_id(
             user_id=linkedin_user.get("user_id")
         )
-        self._debug(user) # TODO: remove
         return user.get("id")
 
     async def _get_chat_rooms(self, sid, user_id):
@@ -54,13 +47,12 @@ class ChatSocketService(socketio.AsyncNamespace):
         rooms = await self._get_chat_rooms(sid=sid, user_id=user_id)
         await self.emit("res_chat_rooms", rooms, room=user_id)
 
-    async def on_req_chat_messages(self, sid, data):
+    async def on_req_conversation(self, sid, data):
         user_id = await self._authenticate(token=data.get("token"))
-        conversation = self.chat_service.get_chat_messages(
+        conversation = self.chat_service.get_conversation(
             user_id=user_id, chat_room_id=data.get("chat_room_id")
         )
-        self._debug(conversation) # TODO: remove
-        await self.emit("res_chat_messages", conversation, room=user_id)
+        await self.emit("res_conversation", conversation, room=user_id)
 
     async def on_req_new_message(self, sid, data):
         user_id = await self._authenticate(token=data.get("token"))
@@ -82,7 +74,6 @@ class ChatSocketService(socketio.AsyncNamespace):
             price=data.get("price"),
             number_of_shares=data.get("number_of_shares"),
             )
-        self._debug(offer)
         await self.emit("res_new_offer", offer, room=room_id)
 
     async def on_req_accept_offer(self, sid, data):

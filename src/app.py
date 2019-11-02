@@ -28,7 +28,7 @@ from src.services import (
     UserService,
 )
 
-"""
+
 def sentry_before_send(event, hint):
     if "exc_info" in hint:
         _exc_type, exc_value, _tb = hint["exc_info"]
@@ -43,7 +43,7 @@ if APP_CONFIG["SENTRY_ENABLE"]:
         integrations=[SanicIntegration(), SqlalchemyIntegration()],
         before_send=sentry_before_send,
     )
-"""
+
 
 app = Sanic(load_env=False)
 app.config.update(APP_CONFIG)
