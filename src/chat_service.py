@@ -12,14 +12,24 @@ class ChatSocketService(socketio.AsyncNamespace):
         self.user_service = UserService(config)
         self.config = config
 
-    async def authenticate(self, token):
-        linkedin_user = self.linkedin_login._get_user_profile(token=token)
+    def _debug(self, data):
+        print()
+        print(data)
+        print()
+
+    async def on_req_testing(self, sid, data):
+        await self.emit("res_testing", { "data": "hello world" })
+
+    async def _authenticate(self, token):
+        linkedin_user = self.linkedin_login._get_linkedin_user(token=token)
+        self._debug(linkedin_user) # TODO: remove
         user = self.user_service.get_user_by_linkedin_id(
             user_id=linkedin_user.get("user_id")
         )
+        self._debug(user) # TODO: remove
         return user.get("id")
 
-    async def join_chat_rooms(self, sid, user_id):
+    async def _get_chat_rooms(self, sid, user_id):
         rooms = self.chat_room_service.get_chat_rooms(user_id=user_id)
         for room in rooms:
             self.enter_room(sid, room.get("chat_room_id"))
@@ -32,34 +42,37 @@ class ChatSocketService(socketio.AsyncNamespace):
     async def on_disconnect(self, sid):
         return {"data": "success"}
 
-    async def on_set_chat_list(self, sid, data):
-        user_id = await self.authenticate(token=data.get("token"))
-        rooms = await self.join_chat_rooms(sid=sid, user_id=user_id)
-        await self.emit("get_chat_list", rooms, room=user_id)
+    async def on_req_chat_rooms(self, sid, data):
+        user_id = await self._authenticate(token=data.get("token"))
+        rooms = await self._get_chat_rooms(sid=sid, user_id=user_id)
+        await self.emit("res_chat_rooms", rooms, room=user_id)
 
-    async def on_set_chat_room(self, sid, data):
-        user_id = await self.authenticate(token=data.get("token"))
-        conversation = self.chat_service.get_conversation(
+    async def on_req_chat_messages(self, sid, data):
+        user_id = await self._authenticate(token=data.get("token"))
+        conversation = self.chat_service.get_chat_messages(
             user_id=user_id, chat_room_id=data.get("chat_room_id")
         )
-        await self.emit("get_chat_room", conversation, room=user_id)
+        self._debug(conversation) # TODO: remove
+        await self.emit("res_chat_messages", conversation, room=user_id)
 
-    async def on_set_new_message(self, sid, data):
-        user_id = await self.authenticate(token=data.get("token"))
-        chat = self.chat_service.add_message(
+    async def on_req_new_message(self, sid, data):
+        user_id = await self._authenticate(token=data.get("token"))
+        chat = self.chat_service.set_new_message(
             chat_room_id=data.get("chat_room_id"),
             message=data.get("message"),
             author_id=user_id,
         )
 
-        await self.emit("get_new_message", chat, room=chat.get("chatRoomId"))
+        await self.emit("res_new_message", chat, room=chat.get("chatRoomId"))
 
-    async def on_set_other_party_details(self, sid, data):
-        user_id = await self.authenticate(token=data.get("token"))
+    async def on_req_other_party_details(self, sid, data):
+        user_id = await self._authenticate(token=data.get("token"))
         room_id = data.get("chat_room_id")
 
         other_party_details = self.chat_room_service.get_other_party_details(
             chat_room_id=room_id, user_id=user_id
         )
 
-        await self.emit("get_other_party_details", other_party_details, room=room_id)
+        await self.emit("res_other_party_details", other_party_details, room=room_id)
+
+

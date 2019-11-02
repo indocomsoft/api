@@ -493,7 +493,14 @@ class ChatService:
     def __init__(self, config):
         self.config = config
 
-    def add_message(self, chat_room_id, message, author_id):
+    def _serialize_chat_messages(self, chat, user_id):
+        return {
+            "message": chat.get("message"),
+            "updated_at": datetime.timestamp(chat.get("updated_at")) * 1000,
+            "is_author": True if chat.get("author_id") == user_id else False,
+        }
+
+    def set_new_message(self, chat_room_id, message, author_id):
         with session_scope() as session:
             chat = Chat(
                 chat_room_id=str(chat_room_id),
@@ -504,101 +511,95 @@ class ChatService:
             session.flush()
             session.refresh(chat)
             chat = chat.asdict()
+            chat_room = session.query(ChatRoom).filter_by(id=chat_room_id).one()
+            chat_room.updated_at = chat.get("updated_at")
+            session.commit()
 
-            Buyer = aliased(User)
-            Seller = aliased(User)
+            return {
+                "chat_room_id": chat_room_id,
+                "updated_at": datetime.timestamp(chat.get("updated_at")) * 1000,
+                "message": self._serialize_chat_messages(chat=chat, user_id=author_id),
+            }
 
-            result = (
-                session.query(ChatRoom, Buyer, Seller)
-                .filter_by(id=chat.get("chat_room_id"))
-                .outerjoin(Buyer, Buyer.id == ChatRoom.buyer_id)
-                .outerjoin(Seller, Seller.id == ChatRoom.seller_id)
-                .one()
-            )
-            return serialize_chat(
-                chat_room_result=result[0].asdict(),
-                chat_result=chat,
-                buyer=result[1].asdict(),
-                seller=result[2].asdict(),
-                user_id=author_id,
-            )
-
-    def get_conversation(self, user_id, chat_room_id):
+    def get_chat_messages(self, user_id, chat_room_id):
         with session_scope() as session:
             Buyer = aliased(User)
             Seller = aliased(User)
 
             results = (
-                session.query(ChatRoom, Chat, Buyer, Seller)
-                .filter(ChatRoom.id == chat_room_id)
-                .outerjoin(Chat, Chat.chat_room_id == ChatRoom.id)
-                .outerjoin(Buyer, Buyer.id == ChatRoom.buyer_id)
-                .outerjoin(Seller, Seller.id == ChatRoom.seller_id)
+                session.query(ChatRoom, Chat, BuyOrder, SellOrder)\
+                .filter(ChatRoom.id == chat_room_id)\
+                .outerjoin(Chat, Chat.chat_room_id == ChatRoom.id)\
+                .outerjoin(BuyOrder, ChatRoom.buyer_id == BuyOrder.user_id)\
+                .outerjoin(SellOrder, ChatRoom.seller_id == SellOrder.user_id)\
                 .all()
             )
-
             data = []
             for result in results:
-                data.append(
-                    serialize_chat(
-                        chat_room_result=result[0].asdict(),
-                        chat_result=result[1].asdict(),
-                        buyer=result[2].asdict(),
-                        seller=result[3].asdict(),
+                if result[1] is None:
+                    chat_room=result[0].asdict()
+                    data.append({
+                        "chat_room_id": chat_room.get("id"),
+                        "message": "Message the buyer to start selling your shares now!",
+                        "updated_at": datetime.timestamp(chat_room.get("updated_at")) * 1000,
+                        "is_author": False
+                    })
+                else:
+                    data.append(self._serialize_chat_messages(
+                        chat=result[1].asdict(),
                         user_id=user_id,
-                    )
-                )
-            return sorted(data, key=lambda item: item["created_at"])
+                    ))
+
+            buy_order = results[0][2].asdict()
+            sell_order = results[0][3].asdict()
+            chat_room = results[0][0].asdict()
+            return {
+                "chat_room_id": chat_room_id,
+                "seller_price": sell_order.get("price"),
+                "seller_number_of_shares": sell_order.get("number_of_shares"),
+                "buyer_price": buy_order.get("price"),
+                "buyer_number_of_shares": buy_order.get("number_of_shares"),
+                "updated_at": datetime.timestamp(chat_room.get("updated_at")) * 1000,
+                "messages": sorted(data, key=lambda item: item["updated_at"])
+            }
 
 
 class ChatRoomService:
     def __init__(self, config):
         self.config = config
 
+    def _serialize_chat_room(self, chat_room, buyer, seller, buy_order, sell_order):
+        return {
+            "chat_room_id": chat_room.get("id"),
+            "seller_price": sell_order.get("price"),
+            "seller_number_of_shares": sell_order.get("number_of_shares"),
+            "buyer_price": buy_order.get("price"),
+            "buyer_number_of_shares": buy_order.get("number_of_shares"),
+            "updated_at": datetime.timestamp(chat_room.get("updated_at")) * 1000,
+        }
+
     def get_chat_rooms(self, user_id):
         data = []
         with session_scope() as session:
-            subq = (
-                session.query(
-                    Chat.chat_room_id, func.max(Chat.created_at).label("maxdate")
-                )
-                .group_by(Chat.chat_room_id)
-                .subquery()
-            )
-
             Buyer = aliased(User)
             Seller = aliased(User)
-
-            results = (
-                (
-                    session.query(Chat, ChatRoom, Buyer, Seller)
-                    .join(
-                        subq,
-                        and_(
-                            Chat.chat_room_id == subq.c.chat_room_id,
-                            Chat.created_at == subq.c.maxdate,
-                        ),
-                    )
-                    .outerjoin(ChatRoom, ChatRoom.id == Chat.chat_room_id)
-                )
-                .filter(
-                    or_(ChatRoom.seller_id == user_id, ChatRoom.buyer_id == user_id)
-                )
-                .outerjoin(Buyer, Buyer.id == ChatRoom.buyer_id)
-                .outerjoin(Seller, Seller.id == ChatRoom.seller_id)
+            results = session.query(ChatRoom, Buyer, Seller, BuyOrder, SellOrder)\
+                .filter(ChatRoom.seller_id == user_id)\
+                .outerjoin(Buyer, Buyer.id == ChatRoom.buyer_id)\
+                .outerjoin(Seller, Seller.id == ChatRoom.seller_id)\
+                .outerjoin(BuyOrder, Seller.id == BuyOrder.user_id)\
+                .outerjoin(SellOrder, Seller.id == SellOrder.user_id)\
                 .all()
-            )
             for result in results:
-                data.append(
-                    serialize_chat(
-                        chat_room_result=result[1].asdict(),
-                        chat_result=result[0].asdict(),
-                        buyer=result[2].asdict(),
-                        seller=result[3].asdict(),
-                        user_id=user_id,
-                    )
-                )
-        return sorted(data, key=lambda item: item["created_at"], reverse=True)
+                data.append(self._serialize_chat_room(
+                    chat_room=result[0].asdict(),
+                    buyer=result[1].asdict(),
+                    seller=result[2].asdict(),
+                    buy_order=result[3].asdict(),
+                    sell_order=result[4].asdict(),
+                ))
+
+        return sorted(data, key=lambda item: item["updated_at"], reverse=True)
 
     def get_other_party_details(self, chat_room_id, user_id):
         with session_scope() as session:
