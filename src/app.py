@@ -37,11 +37,12 @@ def sentry_before_send(event, hint):
     return event
 
 
-sentry_sdk.init(
-    dsn="https://1d45f7681dca45e8b8a83842dd6303b8@sentry.io/1800796",
-    integrations=[SanicIntegration(), SqlalchemyIntegration()],
-    before_send=sentry_before_send,
-)
+if APP_CONFIG["SENTRY_ENABLE"]:
+    sentry_sdk.init(
+        dsn="https://1d45f7681dca45e8b8a83842dd6303b8@sentry.io/1800796",
+        integrations=[SanicIntegration(), SqlalchemyIntegration()],
+        before_send=sentry_before_send,
+    )
 
 app = Sanic(load_env=False)
 app.config.update(APP_CONFIG)

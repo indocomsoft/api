@@ -28,5 +28,6 @@ APP_CONFIG = {
     "CORS_SUPPORTS_CREDENTIALS": True,
     "MAILGUN_API_KEY": getenv("MAILGUN_API_KEY"),
     "MAILGUN_API_BASE_URL": getenv("MAILGUN_API_BASE_URL"),
+    "SENTRY_ENABLE": getenv("SENTRY_ENABLE", ACQUITY_ENV == "PRODUCTION"),
     "apscheduler.jobstores.default": {"type": "sqlalchemy", "url": DATABASE_URL},
 }
