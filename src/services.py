@@ -1,13 +1,10 @@
 from collections import defaultdict
 from datetime import datetime, timezone
-from operator import itemgetter
-from urllib.parse import quote
 
 import requests
 from passlib.hash import argon2
-from sqlalchemy import and_, asc, desc, funcfilter, or_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import aliased
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
 
 from src.database import (
@@ -35,12 +32,9 @@ from src.match import match_buyers_and_sellers
 from src.schemata import (
     CREATE_BUY_ORDER_SCHEMA,
     CREATE_SELL_ORDER_SCHEMA,
-    CREATE_USER_SCHEMA,
     DELETE_ORDER_SCHEMA,
     EDIT_MARKET_PRICE_SCHEMA,
     EDIT_ORDER_SCHEMA,
-    INVITE_SCHEMA,
-    USER_AUTH_SCHEMA,
     UUID_RULE,
     validate_input,
 )
@@ -51,7 +45,9 @@ class UserService:
         self.config = config
         self.hasher = hasher
 
-    def create_if_not_exists(self, email, display_image_url, full_name, user_id):
+    def create_if_not_exists(
+        self, email, display_image_url, full_name, user_id, is_buy
+    ):
         with session_scope() as session:
             user = session.query(User).filter_by(user_id=user_id).one_or_none()
             if user is None:
@@ -66,57 +62,16 @@ class UserService:
                 )
                 session.add(user)
                 session.flush()
-                result = user.asdict()
+
+                req = UserRequest(user_id=str(user.id), is_buy=is_buy)
+                session.add(req)
             else:
+                user.email = email
+                user.full_name = full_name
                 user.display_image_url = display_image_url
-                session.flush()
-                result = user.asdict()
-        return result
-
-    @validate_input({"user_id": UUID_RULE})
-    def activate_buy_privileges(self, user_id):
-        with session_scope() as session:
-            user = session.query(User).get(user_id)
-            if user is None:
-                raise ResourceNotFoundException()
-            user.can_buy = True
-            session.commit()
-            result = user.asdict()
-        return result
-
-    @validate_input(INVITE_SCHEMA)
-    def invite_to_be_seller(self, inviter_id, invited_id):
-        with session_scope() as session:
-            inviter = session.query(User).get(inviter_id)
-            if inviter is None:
-                raise ResourceNotFoundException()
-            if not inviter.is_committee:
-                raise UnauthorizedException("Inviter is not a committee.")
-
-            invited = session.query(User).get(invited_id)
-            invited.can_sell = True
 
             session.commit()
-
-            result = invited.asdict()
-        return result
-
-    @validate_input(INVITE_SCHEMA)
-    def invite_to_be_buyer(self, inviter_id, invited_id):
-        with session_scope() as session:
-            inviter = session.query(User).get(inviter_id)
-            if inviter is None:
-                raise ResourceNotFoundException()
-            if not inviter.is_committee:
-                raise UnauthorizedException("Inviter is not a committee.")
-
-            invited = session.query(User).get(invited_id)
-            invited.can_buy = True
-
-            session.commit()
-
-            result = invited.asdict()
-        return result
+            return user.asdict()
 
     @validate_input({"id": UUID_RULE})
     def get_user(self, id):
@@ -667,46 +622,33 @@ class LinkedInLogin:
         self.config = config
         self.sio = sio
 
-    def get_auth_url(self, socket_id):
-        self.join_room(socket_id)
-        host = self.config.get("HOST")
+    def get_auth_url(self, is_buy):
         client_id = self.config.get("CLIENT_ID")
         response_type = "code"
-        redirect_uri = f"{host}/v1/linkedin/auth/callback"
+
+        redirect_uri = self._get_redirect_url(is_buy)
+
         scope = "r_liteprofile%20r_emailaddress%20w_member_social%20r_basicprofile"
-        url = f"https://www.linkedin.com/oauth/v2/authorization?response_type={response_type}&client_id={client_id}&redirect_uri={redirect_uri}&scope={scope}&state={socket_id}"
+        # TODO add state
+        url = f"https://www.linkedin.com/oauth/v2/authorization?response_type={response_type}&client_id={client_id}&redirect_uri={redirect_uri}&scope={scope}"
+
         return url
 
-    def join_room(self, socket_id):
-        self.sio.enter_room(socket_id, "linkedin")
+    def authenticate(self, code, is_buy):
+        token = self._get_token(code=code)
+        user = self._get_linkedin_user(token)
+        UserService(self.config).create_if_not_exists(**user, is_buy=is_buy)
+        return {"access_token": token}
 
-    def get_linkedin_user(self, token):
-        user_profile = self.get_user_profile(token=token)
-        email = self.get_user_email(token=token)
+    def _get_linkedin_user(self, token):
+        user_profile = self._get_user_profile(token=token)
+        email = self._get_user_email(token=token)
         return {**user_profile, "email": email}
 
-    async def authenticate(self, code, socket_id):
-        try:
-            token = self.get_token(code=code)
-            user = self.get_linkedin_user(token)
-            UserService(self.config).create_if_not_exists(**user)
-            await self.sio.emit(
-                "provider", {"access_token": token}, namespace="/v1/", room=socket_id
-            )
-        except UserProfileNotFoundException:
-            await self.sio.emit(
-                "provider",
-                {"error": "request failed"},
-                namespace="/v1/",
-                room=socket_id,
-            )
-        finally:
-            self.sio.leave_room(socket_id, "linkedin")
+    def _get_token(self, code, is_buy):
+        redirect_uri = self._get_redirect_url(is_buy)
 
-    def get_token(self, code):
-        host = self.config.get("HOST")
-        redirect_uri = f"{host}/v1/linkedin/auth/callback"
-        token = requests.post(
+        return requests.post(
             "https://www.linkedin.com/oauth/v2/accessToken",
             headers={"Content-Type": "x-www-form-urlencoded"},
             params={
@@ -717,9 +659,13 @@ class LinkedInLogin:
                 "client_secret": self.config.get("CLIENT_SECRET"),
             },
         ).json()
-        return token.get("access_token")
 
-    def get_user_profile(self, token):
+    def _get_redirect_url(self, is_buy):
+        host = self.config.get("HOST")
+        redirect_suffix = "buyer" if is_buy else "seller"
+        return f"{host}/v1/auth/callback/{redirect_suffix}/callback"
+
+    def _get_user_profile(self, token):
         user_profile_request = requests.get(
             "https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))",
             headers={"Authorization": f"Bearer {token}"},
@@ -747,7 +693,7 @@ class LinkedInLogin:
             "user_id": user_id,
         }
 
-    def get_user_email(self, token):
+    def _get_user_email(self, token):
         email_request = requests.get(
             "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))",
             headers={"Authorization": f"Bearer {token}"},

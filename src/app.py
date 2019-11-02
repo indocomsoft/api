@@ -9,7 +9,7 @@ from sanic_cors.extension import CORS as initialize_cors
 from sentry_sdk.integrations.sanic import SanicIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
-from src.api import blueprint, user_login
+from src.api import blueprint
 from src.chat_service import ChatSocketService
 from src.config import APP_CONFIG
 from src.exceptions import AcquityException

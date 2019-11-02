@@ -3,7 +3,7 @@ from functools import wraps
 from sanic import Blueprint, response
 from sanic.response import json
 
-from src.exceptions import AcquityException, InvalidAuthorizationTokenException
+from src.exceptions import InvalidAuthorizationTokenException
 from src.utils import expects_json_object
 
 blueprint = Blueprint("root", version="v1")
@@ -13,19 +13,19 @@ def auth_required(f):
     @wraps(f)
     async def decorated_function(request, *args, **kwargs):
         PREFIX = "Bearer "
-        header = request.headers["Authorization"]
-        if not header.startswith(PREFIX):
+        header = request.headers.get("Authorization")
+        if header is None or not header.startswith(PREFIX):
             raise InvalidAuthorizationTokenException("Invalid Authorization Bearer")
         token = header[len(PREFIX) :]
         linkedin_user = request.app.linkedin_login.get_linkedin_user(token=token)
         user = request.app.user_service.get_user_by_linkedin_id(
             user_id=linkedin_user.get("user_id")
         )
-        if user is not None:
-            response = await f(request, user, *args, **kwargs)
-            return response
-        else:
-            return ResourceNotOwnedException("User not found")
+        if user is None:
+            raise ResourceNotOwnedException("User not found")
+
+        response = await f(request, user, *args, **kwargs)
+        return response
 
     return decorated_function
 
@@ -40,43 +40,6 @@ async def user_info(request, user):
 @blueprint.get("/")
 async def root(request):
     return json({"hello": "world"})
-
-
-@blueprint.post("/user/")
-@expects_json_object
-async def create_user(request):
-    user = request.app.user_service.create_if_not_exists(**request.json)
-    return json(user)
-
-
-@expects_json_object
-async def user_login(request):
-    user = request.app.user_service.authenticate(**request.json)
-    if user is None:
-        raise AuthenticationFailed()
-    return {"id": user["id"]}
-
-
-@blueprint.post("/user/invite/seller")
-@auth_required
-@expects_json_object
-async def invite_seller(request, user):
-    return json(
-        request.app.user_service.invite_to_be_seller(
-            **request.json, inviter_id=user["id"]
-        )
-    )
-
-
-@blueprint.post("/user/invite/buyer")
-@auth_required
-@expects_json_object
-async def invite_buyer(request, user):
-    return json(
-        request.app.user_service.invite_to_be_buyer(
-            **request.json, inviter_id=user["id"]
-        )
-    )
 
 
 @blueprint.get("/sell_order/")
@@ -204,19 +167,26 @@ async def ban_user(request, user):
     )
 
 
-@blueprint.get("/linkedin/auth")
-async def linkedin_auth(request):
-    socket_id = request.args.get("socketId")
-    url = request.app.linkedin_login.get_auth_url(socket_id)
-    return response.redirect(url)
+@blueprint.get("/auth/linkedin/buyer")
+async def linkedin_auth_buyer(request):
+    return request.app.linkedin_login.get_auth_url(is_buy=True)
 
 
-@blueprint.get("/linkedin/auth/callback")
-async def linkedin_auth(request):
+@blueprint.get("/auth/linkedin/seller")
+async def linkedin_auth_seller(request):
+    return request.app.linkedin_login.get_auth_url(is_buy=False)
+
+
+@blueprint.get("/auth/linkedin/buyer/callback")
+async def linkedin_auth_callback_buyer(request):
     code = request.args.get("code")
-    state = request.args.get("state")
-    await request.app.linkedin_login.authenticate(code=code, socket_id=state)
-    return json({"data": "success"})
+    return json(request.app.linkedin_login.authenticate(code=code, is_buy=True))
+
+
+@blueprint.get("/auth/linkedin/seller/callback")
+async def linkedin_auth_callback_seller(request):
+    code = request.args.get("code")
+    return json(request.app.linkedin_login.authenticate(code=code, is_buy=False))
 
 
 @blueprint.get("/requests/buy/")

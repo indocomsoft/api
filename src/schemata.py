@@ -34,13 +34,6 @@ EMAIL_RULE = {"type": "string", "regex": EMAIL_REGEX}
 NONNEGATIVE_NUMBER_RULE = {"type": "number", "min": 0}
 OPTIONAL_NONNEGATIVE_NUMBER_RULE = {"type": "number", "min": 0, "required": False}
 
-USER_AUTH_SCHEMA = {"email": EMAIL_RULE, "password": {"type": "string", "minlength": 6}}
-CREATE_USER_SCHEMA = {
-    "email": EMAIL_RULE,
-    "full_name": {"type": "string"},
-    "password": {"type": "string", "minlength": 6},
-}
-INVITE_SCHEMA = {"inviter_id": UUID_RULE, "invited_id": UUID_RULE}
 CREATE_BUY_ORDER_SCHEMA = {
     "user_id": UUID_RULE,
     "number_of_shares": NONNEGATIVE_NUMBER_RULE,
