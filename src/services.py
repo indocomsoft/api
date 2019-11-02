@@ -557,10 +557,14 @@ class OfferService:
         if user_type == "seller" and chat_room.seller_id != user_id:
             raise ResourceNotOwnedException("Wrong user")
 
-    def set_new_offer(self, chat_room_id, author_id, price, number_of_shares, user_type):
+    def set_new_offer(
+        self, chat_room_id, author_id, price, number_of_shares, user_type
+    ):
         with session_scope() as session:
             chat_room = session.query(ChatRoom).filter_by(id=chat_room_id).one()
-            self._verify_user(chat_room=chat_room, user_id=author_id, user_type=user_type)
+            self._verify_user(
+                chat_room=chat_room, user_id=author_id, user_type=user_type
+            )
             offer = Offer(
                 chat_room_id=str(chat_room_id),
                 price=price,
@@ -570,7 +574,7 @@ class OfferService:
             offer = self._get_current_offer(session=session, offer=offer)
             self._update_chatroom_datetime(
                 session=session, chat_room=chat_room, offer=offer
-                )
+            )
             return self._serialize_chat_offer(
                 chat_room_id=chat_room_id, offer=offer, user_id=author_id
             )
@@ -597,7 +601,7 @@ class OfferService:
         with session_scope() as session:
             chat_room = session.query(ChatRoom).filter_by(id=chat_room_id).one()
             self._verify_user(chat_room=chat_room, user_id=user_id, user_type=user_type)
-            offer = session.query(Offer).filter_by(id=offer_id).one()      
+            offer = session.query(Offer).filter_by(id=offer_id).one()
             offer.is_rejected = True
             offer = self._get_current_offer(session=session, offer=offer)
             self._update_chatroom_datetime(
@@ -657,7 +661,9 @@ class ChatService:
     def set_new_message(self, chat_room_id, message, author_id, user_type):
         with session_scope() as session:
             chat_room = session.query(ChatRoom).filter_by(id=chat_room_id).one()
-            self._verify_user(chat_room=chat_room, user_id=author_id, user_type=user_type)
+            self._verify_user(
+                chat_room=chat_room, user_id=author_id, user_type=user_type
+            )
             message = Chat(
                 chat_room_id=str(chat_room_id),
                 message=message,
@@ -734,7 +740,7 @@ class ChatRoomService:
     def get_chat_rooms(self, user_id, user_type):
         data = []
         with session_scope() as session:
-            if (user_type == "buyer"):
+            if user_type == "buyer":
                 results = (
                     session.query(ChatRoom, BuyOrder, SellOrder)
                     .filter(ChatRoom.buyer_id == user_id)

@@ -30,7 +30,9 @@ class ChatSocketService(socketio.AsyncNamespace):
         return user.get("id")
 
     async def _get_chat_rooms(self, sid, user_id, user_type):
-        rooms = self.chat_room_service.get_chat_rooms(user_id=user_id, user_type=user_type)
+        rooms = self.chat_room_service.get_chat_rooms(
+            user_id=user_id, user_type=user_type
+        )
         for room in rooms:
             self.enter_room(sid, room.get("chat_room_id"))
         self.enter_room(sid, user_id)
@@ -44,13 +46,17 @@ class ChatSocketService(socketio.AsyncNamespace):
 
     async def on_req_chat_rooms(self, sid, data):
         user_id = await self._authenticate(token=data.get("token"))
-        rooms = await self._get_chat_rooms(sid=sid, user_id=user_id, user_type=data.get("user_type"))
+        rooms = await self._get_chat_rooms(
+            sid=sid, user_id=user_id, user_type=data.get("user_type")
+        )
         await self.emit("res_chat_rooms", rooms, room=user_id)
 
     async def on_req_conversation(self, sid, data):
         user_id = await self._authenticate(token=data.get("token"))
         conversation = self.chat_service.get_conversation(
-            user_id=user_id, chat_room_id=data.get("chat_room_id"), user_type=data.get("user_type")
+            user_id=user_id,
+            chat_room_id=data.get("chat_room_id"),
+            user_type=data.get("user_type"),
         )
         await self.emit("res_conversation", conversation, room=user_id)
 
@@ -61,7 +67,7 @@ class ChatSocketService(socketio.AsyncNamespace):
             chat_room_id=data.get("chat_room_id"),
             message=data.get("message"),
             author_id=user_id,
-            user_type=data.get("user_type")
+            user_type=data.get("user_type"),
         )
 
         await self.emit("res_new_message", chat, room=room_id)
@@ -74,7 +80,7 @@ class ChatSocketService(socketio.AsyncNamespace):
             chat_room_id=data.get("chat_room_id"),
             price=data.get("price"),
             number_of_shares=data.get("number_of_shares"),
-            user_type=data.get("user_type")
+            user_type=data.get("user_type"),
         )
         await self.emit("res_new_offer", offer, room=room_id)
 
@@ -82,7 +88,10 @@ class ChatSocketService(socketio.AsyncNamespace):
         user_id = await self._authenticate(token=data.get("token"))
         room_id = data.get("chat_room_id")
         offer = self.offer_service.set_accept_offer(
-            chat_room_id=room_id, offer_id=data.get("offer_id"), user_id=user_id, user_type=data.get("user_type")
+            chat_room_id=room_id,
+            offer_id=data.get("offer_id"),
+            user_id=user_id,
+            user_type=data.get("user_type"),
         )
         await self.emit("res_accept_offer", offer, room=room_id)
 
@@ -90,7 +99,10 @@ class ChatSocketService(socketio.AsyncNamespace):
         user_id = await self._authenticate(token=data.get("token"))
         room_id = data.get("chat_room_id")
         offer = self.offer_service.set_reject_offer(
-            chat_room_id=room_id, offer_id=data.get("offer_id"), user_id=user_id, user_type=data.get("user_type")
+            chat_room_id=room_id,
+            offer_id=data.get("offer_id"),
+            user_id=user_id,
+            user_type=data.get("user_type"),
         )
         await self.emit("res_decline_offer", offer, room=room_id)
 
