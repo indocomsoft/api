@@ -152,7 +152,7 @@ async def get_active_round(request):
 
 
 @blueprint.get("/round/previous/statistics/<security_id>")
-async def get_active_round(request, security_id):
+async def get_previous_round(request, security_id):
     return json(
         request.app.round_service.get_previous_round_statistics(security_id=security_id)
     )
@@ -172,20 +172,10 @@ async def linkedin_auth(request):
     return json(request.app.linkedin_login.get_auth_url(**request.args))
 
 
-@blueprint.get("/auth/linkedin/buyer/callback")
-async def linkedin_auth_callback_buyer(request):
-    code = request.args.get("code")
-    return json(
-        request.app.linkedin_login.authenticate(**request.args, code=code, is_buy=True)
-    )
-
-
-@blueprint.get("/auth/linkedin/seller/callback")
-async def linkedin_auth_callback_seller(request):
-    code = request.args.get("code")
-    return json(
-        request.app.linkedin_login.authenticate(**request.args, code=code, is_buy=False)
-    )
+@blueprint.post("/auth/linkedin")
+@expects_json_object
+async def linkedin_auth_callback(request):
+    return json(request.app.linkedin_login.authenticate(**request.json))
 
 
 @blueprint.get("/requests/buy/")

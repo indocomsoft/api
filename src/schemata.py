@@ -63,5 +63,5 @@ GET_AUTH_URL_SHCMEA = {"redirect_uri": {"type": "list", "items": [{"type": "stri
 AUTHENTICATE_SCHEMA = {
     "code": {"type": "string"},
     "redirect_uri": {"type": "list", "items": [{"type": "string"}]},
-    "is_buy": {"type": "boolean"},
+    "user_type": {"type": "string", "allowed": ["buyer", "seller"]},
 }
