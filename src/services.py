@@ -680,9 +680,9 @@ class LinkedInLogin:
     def authenticate(self, code, redirect_uri, user_type):
         is_buy = user_type == "buyer"
         token = self._get_token(code=code, redirect_uri=redirect_uri)
-        user = self.get_linkedin_user(token)
+        user = self.get_linkedin_user(token["access_token"])
         UserService(self.config).create_if_not_exists(**user, is_buy=is_buy)
-        return {"access_token": token}
+        return token
 
     def get_linkedin_user(self, token):
         user_profile = self._get_user_profile(token=token)
@@ -690,7 +690,7 @@ class LinkedInLogin:
         return {**user_profile, "email": email}
 
     def _get_token(self, code, redirect_uri):
-        return requests.post(
+        res = requests.post(
             "https://www.linkedin.com/oauth/v2/accessToken",
             headers={"Content-Type": "x-www-form-urlencoded"},
             params={
@@ -700,7 +700,10 @@ class LinkedInLogin:
                 "client_id": self.config.get("CLIENT_ID"),
                 "client_secret": self.config.get("CLIENT_SECRET"),
             },
-        ).json()
+        )
+        if res.status_code == 401:
+            raise UserProfileNotFoundException("Token retrieval failed.")
+        return res.json()
 
     @staticmethod
     def _get_user_profile(token):
@@ -709,7 +712,7 @@ class LinkedInLogin:
             headers={"Authorization": f"Bearer {token}"},
         )
         if user_profile_request.status_code == 401:
-            raise UserProfileNotFoundException("User profile not found")
+            raise UserProfileNotFoundException("User profile not found.")
         user_profile_data = user_profile_request.json()
         user_id = user_profile_data.get("id")
         first_name = user_profile_data.get("firstName").get("localized").get("en_US")
