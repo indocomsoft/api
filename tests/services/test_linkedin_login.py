@@ -20,5 +20,5 @@ def test_authenticate():
         "src.services.UserService.create_if_not_exists"
     ) as mock_create:
         linkedin_login.authenticate(
-            code="some_code", redirect_uri=["some_redirect_uri"], user_type="buyer"
+            code="some_code", redirect_uri="some_redirect_uri", user_type="buyer"
         )

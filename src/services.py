@@ -679,7 +679,7 @@ class LinkedInLogin:
     @validate_input(AUTHENTICATE_SCHEMA)
     def authenticate(self, code, redirect_uri, user_type):
         is_buy = user_type == "buyer"
-        token = self._get_token(code=code, redirect_uri=redirect_uri[0])
+        token = self._get_token(code=code, redirect_uri=redirect_uri)
         user = self.get_linkedin_user(token)
         UserService(self.config).create_if_not_exists(**user, is_buy=is_buy)
         return {"access_token": token}

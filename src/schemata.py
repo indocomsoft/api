@@ -62,6 +62,6 @@ EDIT_MARKET_PRICE_SCHEMA = {
 GET_AUTH_URL_SHCMEA = {"redirect_uri": {"type": "list", "items": [{"type": "string"}]}}
 AUTHENTICATE_SCHEMA = {
     "code": {"type": "string"},
-    "redirect_uri": {"type": "list", "items": [{"type": "string"}]},
+    "redirect_uri": {"type": "string"},
     "user_type": {"type": "string", "allowed": ["buyer", "seller"]},
 }
