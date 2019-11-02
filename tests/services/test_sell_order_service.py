@@ -54,13 +54,12 @@ def test_get_order_by_id__unauthorized():
     false_user_id = ("1" if user_id[0] == "0" else "0") + user_id[1:]
 
     with pytest.raises(ResourceNotOwnedException):
-        order_retrieved = sell_order_service.get_order_by_id(
-            id=sell_order["id"], user_id=false_user_id
-        )
+        sell_order_service.get_order_by_id(id=sell_order["id"], user_id=false_user_id)
 
 
 def test_create_order__authorized():
-    user_id = create_user()["id"]
+    user = create_user()
+    user_id = user["id"]
     security_id = create_security()["id"]
 
     sell_order_params = {
@@ -72,10 +71,13 @@ def test_create_order__authorized():
 
     with patch("src.services.RoundService.get_active", return_value=None), patch(
         "src.services.RoundService.should_round_start", return_value=False
-    ):
+    ), patch("src.services.EmailService.send_email") as email_mock:
         sell_order_id = sell_order_service.create_order(
             **sell_order_params, scheduler=None
         )["id"]
+        email_mock.assert_called_with(
+            emails=[user["email"]], template="create_sell_order"
+        )
 
     with session_scope() as session:
         sell_order = session.query(SellOrder).get(sell_order_id).asdict()
@@ -99,7 +101,7 @@ def test_create_order__add_new_round():
 
     with patch("src.services.RoundService.get_active", return_value=None), patch(
         "src.services.RoundService.should_round_start", return_value=False
-    ):
+    ), patch("src.services.EmailService.send_email") as email_mock:
         sell_order_id = sell_order_service.create_order(
             **sell_order_params, scheduler=None
         )["id"]
@@ -118,7 +120,8 @@ def test_create_order__add_new_round():
             **sell_order_params, scheduler=SchedulerMock()
         )["id"]
 
-        email_mock.assert_called_once_with([user["email"]], template="round_opened")
+        email_mock.assert_any_call([user["email"]], template="round_opened")
+        email_mock.assert_any_call(emails=[user["email"]], template="create_sell_order")
 
     scheduler_args = scheduler_mock.call_args
     assert scheduler_args[0][1] == "date"
@@ -133,7 +136,7 @@ def test_create_order__add_new_round():
     assert_dict_in(sell_order_params, sell_order)
     assert sell_order["round_id"] is not None
     assert_dict_in(sell_order_params, sell_order2)
-    assert sell_order["round_id"] is not None
+    assert sell_order2["round_id"] is not None
     assert buy_order["round_id"] is not None
 
 
@@ -141,13 +144,17 @@ def test_create_order__unauthorized():
     user_id = create_user(can_sell=False)["id"]
     security_id = create_security()["id"]
 
-    sell_order_service.create_order(
-        user_id=user_id,
-        number_of_shares=20,
-        price=30,
-        security_id=security_id,
-        scheduler=None,
-    )
+    with pytest.raises(UnauthorizedException), patch(
+        "src.services.EmailService.send_email"
+    ) as email_mock:
+        sell_order_service.create_order(
+            user_id=user_id,
+            number_of_shares=20,
+            price=30,
+            security_id=security_id,
+            scheduler=None,
+        )
+        email_mock.assert_not_called()
 
 
 def test_create_order__limit_reached():
@@ -161,19 +168,28 @@ def test_create_order__limit_reached():
         "security_id": security_id,
     }
 
-    for _ in range(APP_CONFIG["ACQUITY_SELL_ORDER_PER_ROUND_LIMIT"]):
+    with patch("src.services.EmailService.send_email"):
+        for _ in range(APP_CONFIG["ACQUITY_SELL_ORDER_PER_ROUND_LIMIT"]):
+            sell_order_service.create_order(**sell_order_params, scheduler=None)
+    with pytest.raises(UnauthorizedException), patch(
+        "src.services.EmailService.send_email"
+    ) as email_mock:
         sell_order_service.create_order(**sell_order_params, scheduler=None)
-    with pytest.raises(UnauthorizedException):
-        sell_order_service.create_order(**sell_order_params, scheduler=None)
+        email_mock.assert_not_called()
 
 
 def test_edit_order():
-    user_id = create_user()["id"]
+    user = create_user()
+    user_id = user["id"]
     sell_order = create_sell_order(user_id=user_id)
 
-    sell_order_service.edit_order(
-        id=sell_order["id"], subject_id=user_id, new_number_of_shares=50
-    )
+    with patch("src.services.EmailService.send_email") as email_mock:
+        sell_order_service.edit_order(
+            id=sell_order["id"], subject_id=user_id, new_number_of_shares=50
+        )
+        email_mock.assert_called_with(
+            emails=[user["email"]], template="edit_sell_order"
+        )
 
     with session_scope() as session:
         new_sell_order = session.query(SellOrder).get(sell_order["id"]).asdict()

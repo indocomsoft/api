@@ -61,9 +61,9 @@ class User(Base):
     provider = Column(String, nullable=False)
     full_name = Column(String, nullable=False)
     display_image_url = Column(String)
-    can_buy = Column(Boolean, nullable=False, server_default="t")
-    can_sell = Column(Boolean, nullable=False, server_default="t")
-    is_committee = Column(Boolean, nullable=False, server_default="t")
+    can_buy = Column(Boolean, nullable=False, server_default="f")
+    can_sell = Column(Boolean, nullable=False, server_default="f")
+    is_committee = Column(Boolean, nullable=False, server_default="f")
     user_id = Column(String, nullable=False, unique=True)
 
     sell_orders = relationship("SellOrder", back_populates="user")

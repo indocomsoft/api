@@ -46,6 +46,7 @@ class UserService:
     def __init__(self, config, hasher=argon2):
         self.config = config
         self.hasher = hasher
+        self.email_service = EmailService(config)
 
     def create_if_not_exists(
         self, email, display_image_url, full_name, user_id, is_buy
@@ -67,6 +68,17 @@ class UserService:
 
                 req = UserRequest(user_id=str(user.id), is_buy=is_buy)
                 session.add(req)
+
+                email_template = "register_buyer" if is_buy else "register_seller"
+                self.email_service.send_email(emails=[email], template=email_template)
+
+                committee_emails = [
+                    u.email
+                    for u in session.query(User).filter_by(is_committee=True).all()
+                ]
+                self.email_service.send_email(
+                    emails=committee_emails, template="new_user_review"
+                )
             else:
                 user.email = email
                 user.full_name = full_name
@@ -96,6 +108,7 @@ class UserService:
 class SellOrderService:
     def __init__(self, config):
         self.config = config
+        self.email_service = EmailService(config)
 
     @validate_input(CREATE_SELL_ORDER_SCHEMA)
     def create_order(self, user_id, number_of_shares, price, security_id, scheduler):
@@ -103,6 +116,8 @@ class SellOrderService:
             user = session.query(User).get(user_id)
             if user is None:
                 raise ResourceNotFoundException()
+            if not user.can_sell:
+                raise UnauthorizedException("User cannot place sell orders.")
 
             sell_order_count = (
                 session.query(SellOrder).filter_by(user_id=user_id).count()
@@ -128,6 +143,11 @@ class SellOrderService:
                 session.add(sell_order)
 
             session.commit()
+
+            self.email_service.send_email(
+                emails=[user.email], template="create_sell_order"
+            )
+
             return sell_order.asdict()
 
     @validate_input({"user_id": UUID_RULE})
@@ -161,6 +181,12 @@ class SellOrderService:
                 sell_order.price = new_price
 
             session.commit()
+
+            user = session.query(User).get(sell_order.user_id)
+            self.email_service.send_email(
+                emails=[user.email], template="edit_sell_order"
+            )
+
             return sell_order.asdict()
 
     @validate_input(DELETE_ORDER_SCHEMA)
@@ -179,6 +205,7 @@ class SellOrderService:
 class BuyOrderService:
     def __init__(self, config):
         self.config = config
+        self.email_service = EmailService(config)
 
     @validate_input(CREATE_BUY_ORDER_SCHEMA)
     def create_order(self, user_id, number_of_shares, price, security_id):
@@ -186,6 +213,8 @@ class BuyOrderService:
             user = session.query(User).get(user_id)
             if user is None:
                 raise ResourceNotFoundException()
+            if not user.can_buy:
+                raise UnauthorizedException("User cannot place buy orders.")
 
             buy_order_count = session.query(BuyOrder).filter_by(user_id=user_id).count()
             if buy_order_count >= self.config["ACQUITY_BUY_ORDER_PER_ROUND_LIMIT"]:
@@ -203,6 +232,11 @@ class BuyOrderService:
 
             session.add(buy_order)
             session.commit()
+
+            self.email_service.send_email(
+                emails=[user.email], template="create_buy_order"
+            )
+
             return buy_order.asdict()
 
     @validate_input({"user_id": UUID_RULE})
@@ -236,6 +270,12 @@ class BuyOrderService:
                 buy_order.price = new_price
 
             session.commit()
+
+            user = session.query(User).get(buy_order.user_id)
+            self.email_service.send_email(
+                emails=[user.email], template="edit_buy_order"
+            )
+
             return buy_order.asdict()
 
     @validate_input(DELETE_ORDER_SCHEMA)
@@ -280,6 +320,7 @@ class SecurityService:
 class RoundService:
     def __init__(self, config):
         self.config = config
+        self.email_service = EmailService(config)
 
     def get_all(self):
         with session_scope() as session:
@@ -332,7 +373,7 @@ class RoundService:
                 buy_order.round_id = str(new_round.id)
 
             emails = [user.email for user in session.query(User).all()]
-            EmailService(self.config).send_email(emails, template="round_opened")
+            self.email_service.send_email(emails, template="round_opened")
 
         if scheduler is not None:
             scheduler.add_job(
@@ -347,6 +388,7 @@ class RoundService:
 class MatchService:
     def __init__(self, config):
         self.config = config
+        self.email_service = EmailService(config)
 
     def run_matches(self):
         round_id = RoundService(self.config).get_active()["id"]
@@ -443,7 +485,7 @@ class MatchService:
                 .filter(User.id.in_(matched_user_ids))
                 .all()
             ]
-            EmailService(self.config).send_email(
+            self.email_service.send_email(
                 matched_emails, template="match_done_has_match"
             )
 
@@ -453,7 +495,7 @@ class MatchService:
                 .filter(User.id.in_(all_user_ids - matched_user_ids))
                 .all()
             ]
-            EmailService(self.config).send_email(
+            self.email_service.send_email(
                 unmatched_emails, template="match_done_no_match"
             )
 
@@ -630,13 +672,13 @@ class LinkedInLogin:
 
         scope = "r_liteprofile%20r_emailaddress%20w_member_social%20r_basicprofile"
         # TODO add state
-        url = f"https://www.linkedin.com/oauth/v2/authorization?response_type={response_type}&client_id={client_id}&redirect_uri={redirect_uri}&scope={scope}"
+        url = f"https://www.linkedin.com/oauth/v2/authorization?response_type={response_type}&client_id={client_id}&redirect_uri={redirect_uri[0]}&scope={scope}"
 
         return url
 
     @validate_input(AUTHENTICATE_SCHEMA)
     def authenticate(self, code, redirect_uri, is_buy):
-        token = self._get_token(code=code, redirect_uri=redirect_uri)
+        token = self._get_token(code=code, redirect_uri=redirect_uri[0])
         user = self._get_linkedin_user(token)
         UserService(self.config).create_if_not_exists(**user, is_buy=is_buy)
         return {"access_token": token}
@@ -703,6 +745,7 @@ class LinkedInLogin:
 class UserRequestService:
     def __init__(self, config):
         self.config = config
+        self.email_service = EmailService(config)
 
     @validate_input({"subject_id": UUID_RULE})
     def get_buy_requests(self, subject_id):
@@ -733,8 +776,14 @@ class UserRequestService:
 
             if request.is_buy:
                 user.can_buy = True
+                self.email_service.send_email(
+                    emails=[user.email], template="approved_buyer"
+                )
             else:
                 user.can_sell = False
+                self.email_service.send_email(
+                    emails=[user.email], template="approved_seller"
+                )
 
             request.delete()
 
@@ -744,4 +793,11 @@ class UserRequestService:
             if not session.query(User).get(subject_id).is_committee:
                 raise InvisibleUnauthorizedException("Not committee")
 
-            session.query(UserRequest).get(request_id).delete()
+            request = session.query(UserRequest).get(request_id)
+            user = session.query(User).get(request.user_id)
+
+            email_template = "rejected_buyer" if request.is_buy else "rejected_seller"
+
+            request.delete()
+
+            self.email_service.send_email(emails=[user.email], template=email_template)

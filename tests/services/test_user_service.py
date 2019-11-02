@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from passlib.hash import plaintext
 
@@ -19,10 +21,16 @@ def test_create__is_buy():
         "display_image_url": "http://blah",
         "is_buy": True,
     }
-    user_service.create_if_not_exists(**user_params)
+
+    committee_email = create_user(is_committee=True)["email"]
+
+    with patch("src.services.EmailService.send_email") as mock:
+        user_service.create_if_not_exists(**user_params)
+        mock.assert_any_call(emails=[user_params["email"]], template="register_buyer")
+        mock.assert_any_call(emails=[committee_email], template="new_user_review")
 
     with session_scope() as session:
-        user = session.query(User).one().asdict()
+        user = session.query(User).filter_by(email="a@a.io").one().asdict()
         req = session.query(UserRequest).one().asdict()
 
     user_expected = user_params
@@ -41,10 +49,16 @@ def test_create__is_sell():
         "display_image_url": "http://blah",
         "is_buy": False,
     }
-    user_service.create_if_not_exists(**user_params)
+
+    committee_email = create_user(is_committee=True)["email"]
+
+    with patch("src.services.EmailService.send_email") as mock:
+        user_service.create_if_not_exists(**user_params)
+        mock.assert_any_call(emails=[user_params["email"]], template="register_seller")
+        mock.assert_any_call(emails=[committee_email], template="new_user_review")
 
     with session_scope() as session:
-        user = session.query(User).one().asdict()
+        user = session.query(User).filter_by(email="a@a.io").one().asdict()
         req = session.query(UserRequest).one().asdict()
 
     user_expected = user_params
@@ -63,15 +77,19 @@ def test_create__user_exists():
         "display_image_url": "http://blah",
         "is_buy": True,
     }
-    user_service.create_if_not_exists(
-        **{
-            **user_params,
-            "email": "b@b.io",
-            "full_name": "Boo",
-            "display_image_url": "old",
-        }
-    )
-    user_service.create_if_not_exists(**user_params)
+    with patch("src.services.EmailService.send_email"):
+        user_service.create_if_not_exists(
+            **{
+                **user_params,
+                "email": "b@b.io",
+                "full_name": "Boo",
+                "display_image_url": "old",
+            }
+        )
+
+    with patch("src.services.EmailService.send_email") as mock:
+        user_service.create_if_not_exists(**user_params)
+        mock.assert_not_called()
 
     with session_scope() as session:
         user = session.query(User).one().asdict()
