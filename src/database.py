@@ -218,6 +218,14 @@ class Chat(Base):
     message = Column(Text, nullable=False)
     author_id = Column(UUID, ForeignKey("users.id"), nullable=False)
 
+class Offer(Base):
+    __tablename__ = "offers"
+
+    chat_room_id = Column(UUID, ForeignKey("chat_rooms.id"), nullable=False)
+    price = Column(Float, nullable=False)
+    number_of_shares = Column(Float, nullable=False)
+    author_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    is_accepted = Column(Boolean, nullable=False, server_default="f")
 
 class UserRequest(Base):
     __tablename__ = "user_requests"

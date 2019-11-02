@@ -1,6 +1,12 @@
 import socketio
 
-from src.services import ChatRoomService, ChatService, LinkedInLogin, UserService
+from src.services import (
+    ChatRoomService, 
+    ChatService, 
+    LinkedInLogin, 
+    UserService,
+    OfferService,
+)
 
 
 class ChatSocketService(socketio.AsyncNamespace):
@@ -10,6 +16,7 @@ class ChatSocketService(socketio.AsyncNamespace):
         self.chat_room_service = ChatRoomService(config)
         self.linkedin_login = LinkedInLogin(config)
         self.user_service = UserService(config)
+        self.offer_service = OfferService(config)
         self.config = config
 
     def _debug(self, data):
@@ -57,13 +64,26 @@ class ChatSocketService(socketio.AsyncNamespace):
 
     async def on_req_new_message(self, sid, data):
         user_id = await self._authenticate(token=data.get("token"))
+        room_id = data.get("chat_room_id")
         chat = self.chat_service.set_new_message(
             chat_room_id=data.get("chat_room_id"),
             message=data.get("message"),
             author_id=user_id,
         )
 
-        await self.emit("res_new_message", chat, room=chat.get("chatRoomId"))
+        await self.emit("res_new_message", chat, room=room_id)
+
+    async def on_req_new_offer(self, sid, data):
+        user_id = await self._authenticate(token=data.get("token"))
+        room_id = data.get("chat_room_id")
+        offer = self.offer_service.set_new_offer(
+            author_id=user_id, 
+            chat_room_id=data.get("chat_room_id"),
+            price=data.get("price"),
+            number_of_shares=data.get("number_of_shares"),
+            )
+        self._debug(offer)
+        await self.emit("res_new_offer", offer, room=room_id)
 
     async def on_req_other_party_details(self, sid, data):
         user_id = await self._authenticate(token=data.get("token"))

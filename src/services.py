@@ -17,6 +17,7 @@ from src.database import (
     Security,
     SellOrder,
     User,
+    Offer,
     UserRequest,
     session_scope,
 )
@@ -474,21 +475,6 @@ class BannedPairService:
             )
 
 
-def serialize_chat(chat_room_result, chat_result, buyer, seller, user_id):
-    (author, dealer) = (
-        (seller, buyer) if seller.get("id") == user_id else (buyer, seller)
-    )
-    return {
-        "dealer_id": dealer.get("id"),
-        "created_at": datetime.timestamp(chat_result.get("created_at")),
-        "updated_at": datetime.timestamp(chat_result.get("updated_at")),
-        "author_name": author.get("full_name"),
-        "author_id": author.get("id"),
-        "message": chat_result.get("message"),
-        "chatRoom_id": chat_room_result.get("id"),
-    }
-
-
 class ChatService:
     def __init__(self, config):
         self.config = config
@@ -498,6 +484,7 @@ class ChatService:
             "message": chat.get("message"),
             "updated_at": datetime.timestamp(chat.get("updated_at")) * 1000,
             "is_author": True if chat.get("author_id") == user_id else False,
+            "type": "message",
         }
 
     def set_new_message(self, chat_room_id, message, author_id):
@@ -518,7 +505,7 @@ class ChatService:
             return {
                 "chat_room_id": chat_room_id,
                 "updated_at": datetime.timestamp(chat.get("updated_at")) * 1000,
-                "message": self._serialize_chat_messages(chat=chat, user_id=author_id),
+                "new_chat": self._serialize_chat_messages(chat=chat, user_id=author_id),
             }
 
     def get_chat_messages(self, user_id, chat_room_id):
@@ -540,9 +527,12 @@ class ChatService:
                     chat_room=result[0].asdict()
                     data.append({
                         "chat_room_id": chat_room.get("id"),
-                        "message": "Message the buyer to start selling your shares now!",
                         "updated_at": datetime.timestamp(chat_room.get("updated_at")) * 1000,
-                        "is_author": False
+                        "conversation": {
+                            "type": "message",
+                            "is_author": False,
+                            "message": "Message the buyer to start selling your shares now!",
+                        }
                     })
                 else:
                     data.append(self._serialize_chat_messages(
@@ -560,7 +550,7 @@ class ChatService:
                 "buyer_price": buy_order.get("price"),
                 "buyer_number_of_shares": buy_order.get("number_of_shares"),
                 "updated_at": datetime.timestamp(chat_room.get("updated_at")) * 1000,
-                "messages": sorted(data, key=lambda item: item["updated_at"])
+                "conversation": sorted(data, key=lambda item: item["updated_at"])
             }
 
 
@@ -619,6 +609,41 @@ class ChatRoomService:
             user = session.query(User).get(other_party_user_id).asdict()
             return {k: user[k] for k in ["email", "full_name"]}
 
+
+class OfferService:
+    def __init__(self, config):
+        self.config = config
+
+    def _serialize_chat_offer(self, offer, user_id):
+        return {
+            "price": offer.get("price"),
+            "number_of_shares": offer.get("number_of_shares"),
+            "updated_at": datetime.timestamp(offer.get("updated_at")) * 1000,
+            "is_author": True if offer.get("author_id") == user_id else False,
+            "type": "offer"
+        } 
+    
+    def set_new_offer(self, chat_room_id, author_id, price, number_of_shares):
+        with session_scope() as session:
+            offer = Offer(
+                chat_room_id=str(chat_room_id),
+                price=price,
+                number_of_shares=number_of_shares,
+                author_id=str(author_id),
+            )
+            session.add(offer)
+            session.flush()
+            session.refresh(offer)
+            offer = offer.asdict()
+            chat_room = session.query(ChatRoom).filter_by(id=chat_room_id).one()
+            chat_room.updated_at = offer.get("updated_at")
+            session.commit()
+
+            return {
+                "chat_room_id": chat_room_id,
+                "updated_at": datetime.timestamp(offer.get("updated_at")) * 1000,
+                "new_chat": self._serialize_chat_offer(offer=offer, user_id=author_id),
+            }        
 
 class LinkedInLogin:
     def __init__(self, config):
