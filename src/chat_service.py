@@ -85,6 +85,26 @@ class ChatSocketService(socketio.AsyncNamespace):
         self._debug(offer)
         await self.emit("res_new_offer", offer, room=room_id)
 
+    async def on_req_accept_offer(self, sid, data):
+        user_id = await self._authenticate(token=data.get("token"))
+        room_id = data.get("chat_room_id")
+        offer = self.offer_service.set_accept_offer(
+            chat_room_id=room_id,
+            offer_id=data.get("offer_id"),
+            user_id=user_id
+        )
+        await self.emit("res_accept_offer", offer, room=room_id)
+
+    async def on_req_decline_offer(self, sid, data):
+        user_id = await self._authenticate(token=data.get("token"))
+        room_id = data.get("chat_room_id")
+        offer = self.offer_service.set_reject_offer(
+            chat_room_id=room_id,
+            offer_id=data.get("offer_id"),
+            user_id=user_id
+        )
+        await self.emit("res_decline_offer", offer, room=room_id)
+
     async def on_req_other_party_details(self, sid, data):
         user_id = await self._authenticate(token=data.get("token"))
         room_id = data.get("chat_room_id")
