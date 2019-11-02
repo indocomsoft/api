@@ -13,11 +13,11 @@ from src.database import (
     Chat,
     ChatRoom,
     Match,
+    Offer,
     Round,
     Security,
     SellOrder,
     User,
-    Offer,
     UserRequest,
     session_scope,
 )
@@ -489,7 +489,7 @@ class OfferService:
             "is_rejected": offer.get("is_rejected"),
             "updated_at": datetime.timestamp(offer.get("updated_at")) * 1000,
             "is_author": True if offer.get("author_id") == user_id else False,
-            "type": "offer"
+            "type": "offer",
         }
 
     def _serialize_chat_offer(self, chat_room_id, offer, user_id):
@@ -497,8 +497,8 @@ class OfferService:
             "chat_room_id": chat_room_id,
             "updated_at": datetime.timestamp(offer.get("updated_at")) * 1000,
             "new_chat": self._serialize_offer(offer=offer, user_id=user_id),
-        } 
-    
+        }
+
     def _get_current_offer(self, session, offer):
         session.add(offer)
         session.flush()
@@ -509,7 +509,7 @@ class OfferService:
         chat_room = session.query(ChatRoom).filter_by(id=chat_room_id).one()
         chat_room.updated_at = offer.get("updated_at")
         session.commit()
-    
+
     def set_new_offer(self, chat_room_id, author_id, price, number_of_shares):
         with session_scope() as session:
             offer = Offer(
@@ -519,19 +519,21 @@ class OfferService:
                 author_id=str(author_id),
             )
             offer = self._get_current_offer(session=session, offer=offer)
-            self._set_last_chat_date_time(session=session, chat_room_id=chat_room_id, offer=offer)
+            self._set_last_chat_date_time(
+                session=session, chat_room_id=chat_room_id, offer=offer
+            )
             return self._serialize_chat_offer(
-                chat_room_id=chat_room_id,
-                offer=offer,
-                user_id=author_id,
+                chat_room_id=chat_room_id, offer=offer, user_id=author_id
             )
 
     def set_accept_offer(self, chat_room_id, offer_id, user_id):
         with session_scope() as session:
-            offer_chat_room = session.query(Offer, ChatRoom)\
-                .filter_by(id=offer_id)\
-                .outerjoin(ChatRoom, Offer.chat_room_id == ChatRoom.id)\
+            offer_chat_room = (
+                session.query(Offer, ChatRoom)
+                .filter_by(id=offer_id)
+                .outerjoin(ChatRoom, Offer.chat_room_id == ChatRoom.id)
                 .one()
+            )
             if offer_chat_room[1].seller_id == user_id:
                 offer_chat_room[0].is_seller_agreeable = True
             elif offer_chat_room[1].buyer_id == user_id:
@@ -539,11 +541,11 @@ class OfferService:
             else:
                 raise ResourceNotOwnedException("Wrong user")
             offer = self._get_current_offer(session=session, offer=offer_chat_room[0])
-            self._set_last_chat_date_time(session=session, chat_room_id=chat_room_id, offer=offer)
+            self._set_last_chat_date_time(
+                session=session, chat_room_id=chat_room_id, offer=offer
+            )
             return self._serialize_chat_offer(
-                chat_room_id=chat_room_id,
-                offer=offer,
-                user_id=user_id,
+                chat_room_id=chat_room_id, offer=offer, user_id=user_id
             )
 
     def set_reject_offer(self, chat_room_id, offer_id, user_id):
@@ -551,25 +553,23 @@ class OfferService:
             offer = session.query(Offer).filter_by(id=offer_id).one()
             offer.is_rejected = True
             offer = self._get_current_offer(session=session, offer=offer)
-            self._set_last_chat_date_time(session=session, chat_room_id=chat_room_id, offer=offer)
+            self._set_last_chat_date_time(
+                session=session, chat_room_id=chat_room_id, offer=offer
+            )
             return self._serialize_chat_offer(
-                chat_room_id=chat_room_id,
-                offer=offer,
-                user_id=user_id,
+                chat_room_id=chat_room_id, offer=offer, user_id=user_id
             )
 
     def get_chat_offers(self, user_id, chat_room_id):
         with session_scope() as session:
-            results = session.query(Offer)\
-                .filter_by(chat_room_id=chat_room_id)\
-                .all()
+            results = session.query(Offer).filter_by(chat_room_id=chat_room_id).all()
             data = []
             for result in results:
-                data.append(self._serialize_offer(
-                    offer=result.asdict(),
-                    user_id=user_id,
-                ))
+                data.append(
+                    self._serialize_offer(offer=result.asdict(), user_id=user_id)
+                )
             return data
+
 
 class ChatService:
     def __init__(self, config):
@@ -610,42 +610,44 @@ class ChatService:
                 author_id=str(author_id),
             )
             message = self._get_current_message(session=session, message=message)
-            self._set_last_chat_date_time(session=session, chat_room_id=chat_room_id, message=message)
+            self._set_last_chat_date_time(
+                session=session, chat_room_id=chat_room_id, message=message
+            )
             return self._serialize_chat_message(
-                chat_room_id=chat_room_id,
-                message=message,
-                user_id=author_id,
+                chat_room_id=chat_room_id, message=message, user_id=author_id
             )
 
     def get_chat_messages(self, user_id, chat_room_id):
         with session_scope() as session:
-            results = session.query(Chat)\
-                .filter_by(chat_room_id=chat_room_id)\
-                .all()
+            results = session.query(Chat).filter_by(chat_room_id=chat_room_id).all()
             data = []
             for result in results:
-                data.append(self._serialize_message(
-                    message=result.asdict(),
-                    user_id=user_id,
-                ))
+                data.append(
+                    self._serialize_message(message=result.asdict(), user_id=user_id)
+                )
             return data
 
     def get_conversation(self, user_id, chat_room_id):
         with session_scope() as session:
-            results = session.query(ChatRoom, BuyOrder, SellOrder)\
-                .filter(ChatRoom.id == chat_room_id)\
-                .outerjoin(BuyOrder, ChatRoom.buyer_id == BuyOrder.user_id)\
-                .outerjoin(SellOrder, ChatRoom.seller_id == SellOrder.user_id)\
+            results = (
+                session.query(ChatRoom, BuyOrder, SellOrder)
+                .filter(ChatRoom.id == chat_room_id)
+                .outerjoin(BuyOrder, ChatRoom.buyer_id == BuyOrder.user_id)
+                .outerjoin(SellOrder, ChatRoom.seller_id == SellOrder.user_id)
                 .one()
+            )
 
             chat_room = results[0].asdict()
             buy_order = results[1].asdict()
             sell_order = results[2].asdict()
 
-            offers = OfferService(self.config)\
-                .get_chat_offers(user_id=user_id, chat_room_id=chat_room_id)
-            messages = self.get_chat_messages(user_id=user_id, chat_room_id=chat_room_id)
-            
+            offers = OfferService(self.config).get_chat_offers(
+                user_id=user_id, chat_room_id=chat_room_id
+            )
+            messages = self.get_chat_messages(
+                user_id=user_id, chat_room_id=chat_room_id
+            )
+
             return {
                 "chat_room_id": chat_room_id,
                 "seller_price": sell_order.get("price"),
@@ -653,7 +655,9 @@ class ChatService:
                 "buyer_price": buy_order.get("price"),
                 "buyer_number_of_shares": buy_order.get("number_of_shares"),
                 "updated_at": datetime.timestamp(chat_room.get("updated_at")) * 1000,
-                "conversation": sorted(messages + offers, key=lambda item: item["updated_at"])
+                "conversation": sorted(
+                    messages + offers, key=lambda item: item["updated_at"]
+                ),
             }
 
 
@@ -676,21 +680,25 @@ class ChatRoomService:
         with session_scope() as session:
             Buyer = aliased(User)
             Seller = aliased(User)
-            results = session.query(ChatRoom, Buyer, Seller, BuyOrder, SellOrder)\
-                .filter(ChatRoom.seller_id == user_id)\
-                .outerjoin(Buyer, Buyer.id == ChatRoom.buyer_id)\
-                .outerjoin(Seller, Seller.id == ChatRoom.seller_id)\
-                .outerjoin(BuyOrder, Seller.id == BuyOrder.user_id)\
-                .outerjoin(SellOrder, Seller.id == SellOrder.user_id)\
+            results = (
+                session.query(ChatRoom, Buyer, Seller, BuyOrder, SellOrder)
+                .filter(ChatRoom.seller_id == user_id)
+                .outerjoin(Buyer, Buyer.id == ChatRoom.buyer_id)
+                .outerjoin(Seller, Seller.id == ChatRoom.seller_id)
+                .outerjoin(BuyOrder, Seller.id == BuyOrder.user_id)
+                .outerjoin(SellOrder, Seller.id == SellOrder.user_id)
                 .all()
+            )
             for result in results:
-                data.append(self._serialize_chat_room(
-                    chat_room=result[0].asdict(),
-                    buyer=result[1].asdict(),
-                    seller=result[2].asdict(),
-                    buy_order=result[3].asdict(),
-                    sell_order=result[4].asdict(),
-                ))
+                data.append(
+                    self._serialize_chat_room(
+                        chat_room=result[0].asdict(),
+                        buyer=result[1].asdict(),
+                        seller=result[2].asdict(),
+                        buy_order=result[3].asdict(),
+                        sell_order=result[4].asdict(),
+                    )
+                )
 
         return sorted(data, key=lambda item: item["updated_at"], reverse=True)
 

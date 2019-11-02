@@ -1,20 +1,19 @@
 import uuid
+from datetime import datetime
 
 from passlib.hash import argon2
 
 from src.database import (
-    Chat, 
-    ChatRoom, 
-    Security,
-    User, 
-    Round,
     BuyOrder,
-    SellOrder,
+    Chat,
+    ChatRoom,
     Match,
-    session_scope
+    Round,
+    Security,
+    SellOrder,
+    User,
+    session_scope,
 )
-
-from datetime import datetime
 
 
 def seed_db():
@@ -65,30 +64,41 @@ def seed_db():
         )
 
         # create chatrooms
-        if session.query(ChatRoom).filter_by(seller_id=str(brandon_gmail_id)).count() == 0:
-            session.add(ChatRoom(buyer_id=str(brandon_yahoo_id), seller_id=str(brandon_gmail_id)))
-        if session.query(ChatRoom).filter_by(seller_id=str(brandon_yahoo_id)).count() == 0:
-            session.add(ChatRoom(buyer_id=str(brandon_gmail_id), seller_id=str(brandon_yahoo_id)))
+        if (
+            session.query(ChatRoom).filter_by(seller_id=str(brandon_gmail_id)).count()
+            == 0
+        ):
+            session.add(
+                ChatRoom(
+                    buyer_id=str(brandon_yahoo_id), seller_id=str(brandon_gmail_id)
+                )
+            )
+        if (
+            session.query(ChatRoom).filter_by(seller_id=str(brandon_yahoo_id)).count()
+            == 0
+        ):
+            session.add(
+                ChatRoom(
+                    buyer_id=str(brandon_gmail_id), seller_id=str(brandon_yahoo_id)
+                )
+            )
 
         # adds security
         if session.query(Security).filter_by(name="Grab").count() == 0:
             session.add(Security(name="Grab"))
         grab_security_id = session.query(Security).filter_by(name="Grab").first().id
 
-
         # creates round
         current_round_end_time = datetime.now()
         if session.query(Round).filter_by(end_time=current_round_end_time).count() == 0:
-            session.add(
-                Round(
-                    end_time=current_round_end_time,
-                    is_concluded=True
-                )
-            )
+            session.add(Round(end_time=current_round_end_time, is_concluded=True))
         current_round_id = session.query(Round).first().id
-        
+
         # create buy orders
-        if session.query(BuyOrder).filter_by(user_id=str(brandon_gmail_id)).count() == 0:
+        if (
+            session.query(BuyOrder).filter_by(user_id=str(brandon_gmail_id)).count()
+            == 0
+        ):
             session.add(
                 BuyOrder(
                     user_id=str(brandon_gmail_id),
@@ -98,7 +108,10 @@ def seed_db():
                     round_id=str(current_round_id),
                 )
             )
-        if session.query(BuyOrder).filter_by(user_id=str(brandon_yahoo_id)).count() == 0:
+        if (
+            session.query(BuyOrder).filter_by(user_id=str(brandon_yahoo_id)).count()
+            == 0
+        ):
             session.add(
                 BuyOrder(
                     user_id=str(brandon_yahoo_id),
@@ -108,11 +121,18 @@ def seed_db():
                     round_id=str(current_round_id),
                 )
             )
-        brandon_yahoo_buy_order = session.query(BuyOrder).filter_by(user_id=str(brandon_yahoo_id)).first().id
-        brandon_gmail_buy_order = session.query(BuyOrder).filter_by(user_id=str(brandon_gmail_id)).first().id
+        brandon_yahoo_buy_order = (
+            session.query(BuyOrder).filter_by(user_id=str(brandon_yahoo_id)).first().id
+        )
+        brandon_gmail_buy_order = (
+            session.query(BuyOrder).filter_by(user_id=str(brandon_gmail_id)).first().id
+        )
 
         # create sell orders
-        if session.query(SellOrder).filter_by(user_id=str(brandon_gmail_id)).count() == 0:
+        if (
+            session.query(SellOrder).filter_by(user_id=str(brandon_gmail_id)).count()
+            == 0
+        ):
             session.add(
                 SellOrder(
                     user_id=str(brandon_gmail_id),
@@ -122,7 +142,10 @@ def seed_db():
                     round_id=str(current_round_id),
                 )
             )
-        if session.query(SellOrder).filter_by(user_id=str(brandon_yahoo_id)).count() == 0:
+        if (
+            session.query(SellOrder).filter_by(user_id=str(brandon_yahoo_id)).count()
+            == 0
+        ):
             session.add(
                 SellOrder(
                     user_id=str(brandon_yahoo_id),
@@ -132,8 +155,12 @@ def seed_db():
                     round_id=str(current_round_id),
                 )
             )
-        brandon_yahoo_sell_order = session.query(SellOrder).filter_by(user_id=str(brandon_yahoo_id)).first().id
-        brandon_gmail_sell_order = session.query(SellOrder).filter_by(user_id=str(brandon_gmail_id)).first().id
+        brandon_yahoo_sell_order = (
+            session.query(SellOrder).filter_by(user_id=str(brandon_yahoo_id)).first().id
+        )
+        brandon_gmail_sell_order = (
+            session.query(SellOrder).filter_by(user_id=str(brandon_gmail_id)).first().id
+        )
 
 
 if __name__ == "__main__":

@@ -1,11 +1,11 @@
 import socketio
 
 from src.services import (
-    ChatRoomService, 
-    ChatService, 
-    LinkedInLogin, 
-    UserService,
+    ChatRoomService,
+    ChatService,
+    LinkedInLogin,
     OfferService,
+    UserService,
 )
 
 
@@ -20,7 +20,7 @@ class ChatSocketService(socketio.AsyncNamespace):
         self.config = config
 
     async def on_req_testing(self, sid, data):
-        await self.emit("res_testing", { "data": "hello world" })
+        await self.emit("res_testing", {"data": "hello world"})
 
     async def _authenticate(self, token):
         linkedin_user = self.linkedin_login._get_linkedin_user(token=token)
@@ -69,20 +69,18 @@ class ChatSocketService(socketio.AsyncNamespace):
         user_id = await self._authenticate(token=data.get("token"))
         room_id = data.get("chat_room_id")
         offer = self.offer_service.set_new_offer(
-            author_id=user_id, 
+            author_id=user_id,
             chat_room_id=data.get("chat_room_id"),
             price=data.get("price"),
             number_of_shares=data.get("number_of_shares"),
-            )
+        )
         await self.emit("res_new_offer", offer, room=room_id)
 
     async def on_req_accept_offer(self, sid, data):
         user_id = await self._authenticate(token=data.get("token"))
         room_id = data.get("chat_room_id")
         offer = self.offer_service.set_accept_offer(
-            chat_room_id=room_id,
-            offer_id=data.get("offer_id"),
-            user_id=user_id
+            chat_room_id=room_id, offer_id=data.get("offer_id"), user_id=user_id
         )
         await self.emit("res_accept_offer", offer, room=room_id)
 
@@ -90,9 +88,7 @@ class ChatSocketService(socketio.AsyncNamespace):
         user_id = await self._authenticate(token=data.get("token"))
         room_id = data.get("chat_room_id")
         offer = self.offer_service.set_reject_offer(
-            chat_room_id=room_id,
-            offer_id=data.get("offer_id"),
-            user_id=user_id
+            chat_room_id=room_id, offer_id=data.get("offer_id"), user_id=user_id
         )
         await self.emit("res_decline_offer", offer, room=room_id)
 
@@ -105,5 +101,3 @@ class ChatSocketService(socketio.AsyncNamespace):
         )
 
         await self.emit("res_other_party_details", other_party_details, room=room_id)
-
-

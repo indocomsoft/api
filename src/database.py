@@ -218,6 +218,7 @@ class Chat(Base):
     message = Column(Text, nullable=False)
     author_id = Column(UUID, ForeignKey("users.id"), nullable=False)
 
+
 class Offer(Base):
     __tablename__ = "offers"
 
@@ -228,6 +229,7 @@ class Offer(Base):
     is_buyer_agreeable = Column(Boolean, nullable=False, server_default="f")
     is_seller_agreeable = Column(Boolean, nullable=False, server_default="f")
     is_rejected = Column(Boolean, nullable=False, server_default="f")
+
 
 class UserRequest(Base):
     __tablename__ = "user_requests"
