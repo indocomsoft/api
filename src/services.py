@@ -522,7 +522,7 @@ class OfferService:
                 .one()
             if chat_room_offer[1].seller_id == user_id:
                 chat_room_offer[0].is_seller_agreeable = True
-            else if chat_room_offer[1].buyer_id == user_id:
+            elif chat_room_offer[1].buyer_id == user_id:
                 chat_room_offer[0].is_buyer_agreeable = True
             else:
                 raise ResourceNotOwnedException("Wrong user")
@@ -553,6 +553,24 @@ class OfferService:
                 "new_chat": self._serialize_chat_offer(offer=offer, user_id=user_id),
             }
 
+    def get_chat_offers(self, user_id, chat_room_id):
+        with session_scope() as session:
+            results = (
+                session.query(ChatRoom, Offer, BuyOrder, SellOrder)\
+                .filter(ChatRoom.id == chat_room_id)\
+                .outerjoin(Offer, Offer.chat_room_id == ChatRoom.id)\
+                .outerjoin(BuyOrder, ChatRoom.buyer_id == BuyOrder.user_id)\
+                .outerjoin(SellOrder, ChatRoom.seller_id == SellOrder.user_id)\
+                .all()
+            )
+            data = []
+            for result in results:
+                if result[1] is not None:
+                    data.append(self._serialize_chat_offer(
+                        offer=result[1].asdict(),
+                        user_id=user_id,
+                    ))
+            return data
 
 class ChatService:
     def __init__(self, config):
@@ -590,9 +608,6 @@ class ChatService:
 
     def get_chat_messages(self, user_id, chat_room_id):
         with session_scope() as session:
-            Buyer = aliased(User)
-            Seller = aliased(User)
-
             results = (
                 session.query(ChatRoom, Chat, BuyOrder, SellOrder)\
                 .filter(ChatRoom.id == chat_room_id)\
@@ -623,6 +638,8 @@ class ChatService:
             buy_order = results[0][2].asdict()
             sell_order = results[0][3].asdict()
             chat_room = results[0][0].asdict()
+
+            offers = OfferService(self.config).get_chat_offers(user_id=user_id, chat_room_id=chat_room_id)
             return {
                 "chat_room_id": chat_room_id,
                 "seller_price": sell_order.get("price"),
@@ -630,7 +647,7 @@ class ChatService:
                 "buyer_price": buy_order.get("price"),
                 "buyer_number_of_shares": buy_order.get("number_of_shares"),
                 "updated_at": datetime.timestamp(chat_room.get("updated_at")) * 1000,
-                "conversation": sorted(data, key=lambda item: item["updated_at"])
+                "conversation": sorted(data + offers, key=lambda item: item["updated_at"])
             }
 
 
