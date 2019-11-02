@@ -591,7 +591,7 @@ class OfferService:
                 offer.is_buyer_agreeable = True
             offer = self._get_current_offer(session=session, offer=offer)
             self._update_chatroom_datetime(
-                session=session, chat_room_id=chat_room_id, offer=offer
+                session=session, chat_room=chat_room, offer=offer
             )
             return self._serialize_chat_offer(
                 chat_room_id=chat_room_id, offer=offer, user_id=user_id
@@ -605,7 +605,7 @@ class OfferService:
             offer.is_rejected = True
             offer = self._get_current_offer(session=session, offer=offer)
             self._update_chatroom_datetime(
-                session=session, chat_room_id=chat_room_id, offer=offer
+                session=session, chat_room=chat_room, offer=offer
             )
             return self._serialize_chat_offer(
                 chat_room_id=chat_room_id, offer=offer, user_id=user_id
@@ -671,7 +671,7 @@ class ChatService:
             )
             message = self._get_current_message(session=session, message=message)
             self._update_chatroom_datetime(
-                session=session, chat_room_id=chat_room_id, message=message
+                session=session, chat_room=chat_room, message=message
             )
             return self._serialize_chat_message(
                 chat_room_id=chat_room_id, message=message, user_id=author_id
