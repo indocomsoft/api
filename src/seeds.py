@@ -1,60 +1,43 @@
-from src.database import Chat, ChatRoom, Security, User, session_scope
+import uuid
+from datetime import datetime
+
+from src.database import (
+    BuyOrder,
+    Chat,
+    ChatRoom,
+    Match,
+    Round,
+    Security,
+    SellOrder,
+    User,
+    session_scope,
+)
 
 
 def seed_db():
     with session_scope() as session:
 
-        # adding users
+        # add users
         user_seeds = [
             {
-                "email": "admin@acquity.com",
-                "provider": "linkedin",
-                "full_name": "Acquity",
-                "display_image_url": "https://loremflickr.com/320/240",
-                "can_buy": True,
-                "can_sell": True,
-                "is_committe": True,
-                "user_id": "1",
-            },
-            {
-                "email": "a@a.com",
-                "provider": "linkedin",
-                "full_name": "Aaron",
-                "display_image_url": "https://loremflickr.com/320/240",
-                "can_buy": True,
-                "can_sell": True,
-                "is_committe": False,
-                "user_id": "2",
-            },
-            {
-                "email": "b@b.com",
-                "provider": "linkedin",
-                "full_name": "Ben",
-                "display_image_url": "https://loremflickr.com/320/240",
-                "can_buy": True,
-                "can_sell": True,
-                "is_committe": False,
-                "user_id": "3",
-            },
-            {
-                "email": "c@c.com",
-                "provider": "linkedin",
-                "full_name": "Colin",
-                "display_image_url": "https://loremflickr.com/320/240",
-                "can_buy": True,
-                "can_sell": True,
-                "is_committee": False,
-                "user_id": "4",
-            },
-            {
-                "email": "nwjbrandon@outlook.com",
+                "email": "nwjbrandon.lexonous@gmail.com",
                 "provider": "linkedin",
                 "full_name": "Brandon Ng",
-                "display_image_url": "https://media.licdn.com/dms/image/C5103AQHrnOLE-_QFsg/profile-displayphoto-shrink_800_800/0?e=1577923200&v=beta&t=c1KiSHRhuvVYqwYvkBOEhzAMw0ykSbBNjRsGNta_oGQ",
+                "display_image_url": None,
                 "can_buy": True,
                 "can_sell": True,
                 "is_committee": True,
-                "user_id": "z_1i-r7yV2",
+                "user_id": "UiYX0uP7Cf",
+            },
+            {
+                "email": "brandon.ng10@yahoo.com.sg",
+                "provider": "linkedin",
+                "full_name": "Brandon Ng",
+                "display_image_url": None,
+                "can_buy": True,
+                "can_sell": True,
+                "is_committee": True,
+                "user_id": "8tJpx5jWUx",
             },
         ]
         for user in user_seeds:
@@ -71,49 +54,114 @@ def seed_db():
                         user_id=user.get("user_id"),
                     )
                 )
-
-        # getting user ids
-        admin_id = session.query(User).filter_by(email="admin@acquity.com").first().id
-        aaron_id = session.query(User).filter_by(email="a@a.com").first().id
-        ben_id = session.query(User).filter_by(email="b@b.com").first().id
-        colin_id = session.query(User).filter_by(email="c@c.com").first().id
-        brandon_id = (
-            session.query(User).filter_by(email="nwjbrandon@outlook.com").first().id
+        brandon_gmail_id = (
+            session.query(User)
+            .filter_by(email="nwjbrandon.lexonous@gmail.com")
+            .first()
+            .id
+        )
+        brandon_yahoo_id = (
+            session.query(User).filter_by(email="brandon.ng10@yahoo.com.sg").first().id
         )
 
-        # creating chatrooms
-        if session.query(ChatRoom).filter_by(seller_id=str(aaron_id)).count() == 0:
-            session.add(ChatRoom(seller_id=str(aaron_id), buyer_id=str(brandon_id)))
-        if session.query(ChatRoom).filter_by(seller_id=str(brandon_id)).count() == 0:
-            session.add(ChatRoom(seller_id=str(brandon_id), buyer_id=str(colin_id)))
-
-        # creating chats
-        chat_room_id = (
-            session.query(ChatRoom).filter_by(seller_id=str(aaron_id)).first().id
-        )
-        if session.query(Chat).filter_by(chat_room_id=str(chat_room_id)).count() == 0:
+        # create chatrooms
+        if (
+            session.query(ChatRoom).filter_by(seller_id=str(brandon_gmail_id)).count()
+            == 0
+        ):
             session.add(
-                Chat(
-                    chat_room_id=str(chat_room_id),
-                    message="Start your deal now!",
-                    author_id=str(aaron_id),
+                ChatRoom(
+                    buyer_id=str(brandon_yahoo_id), seller_id=str(brandon_gmail_id)
                 )
             )
-        chat_room_id = (
-            session.query(ChatRoom).filter_by(buyer_id=str(colin_id)).first().id
-        )
-        if session.query(Chat).filter_by(chat_room_id=str(chat_room_id)).count() == 0:
+        if (
+            session.query(ChatRoom).filter_by(seller_id=str(brandon_yahoo_id)).count()
+            == 0
+        ):
             session.add(
-                Chat(
-                    chat_room_id=str(chat_room_id),
-                    message="Start your deal now!",
-                    author_id=str(colin_id),
+                ChatRoom(
+                    buyer_id=str(brandon_gmail_id), seller_id=str(brandon_yahoo_id)
                 )
             )
 
-        # adding securities
+        # adds security
         if session.query(Security).filter_by(name="Grab").count() == 0:
             session.add(Security(name="Grab"))
+        grab_security_id = session.query(Security).filter_by(name="Grab").first().id
+
+        # creates round
+        current_round_end_time = datetime.now()
+        if session.query(Round).filter_by(end_time=current_round_end_time).count() == 0:
+            session.add(Round(end_time=current_round_end_time, is_concluded=True))
+        current_round_id = session.query(Round).first().id
+
+        # create buy orders
+        if (
+            session.query(BuyOrder).filter_by(user_id=str(brandon_gmail_id)).count()
+            == 0
+        ):
+            session.add(
+                BuyOrder(
+                    user_id=str(brandon_gmail_id),
+                    security_id=str(grab_security_id),
+                    number_of_shares=100,
+                    price=10,
+                    round_id=str(current_round_id),
+                )
+            )
+        if (
+            session.query(BuyOrder).filter_by(user_id=str(brandon_yahoo_id)).count()
+            == 0
+        ):
+            session.add(
+                BuyOrder(
+                    user_id=str(brandon_yahoo_id),
+                    security_id=str(grab_security_id),
+                    number_of_shares=200,
+                    price=10,
+                    round_id=str(current_round_id),
+                )
+            )
+        brandon_yahoo_buy_order = (
+            session.query(BuyOrder).filter_by(user_id=str(brandon_yahoo_id)).first().id
+        )
+        brandon_gmail_buy_order = (
+            session.query(BuyOrder).filter_by(user_id=str(brandon_gmail_id)).first().id
+        )
+
+        # create sell orders
+        if (
+            session.query(SellOrder).filter_by(user_id=str(brandon_gmail_id)).count()
+            == 0
+        ):
+            session.add(
+                SellOrder(
+                    user_id=str(brandon_gmail_id),
+                    security_id=str(grab_security_id),
+                    number_of_shares=300,
+                    price=10,
+                    round_id=str(current_round_id),
+                )
+            )
+        if (
+            session.query(SellOrder).filter_by(user_id=str(brandon_yahoo_id)).count()
+            == 0
+        ):
+            session.add(
+                SellOrder(
+                    user_id=str(brandon_yahoo_id),
+                    security_id=str(grab_security_id),
+                    number_of_shares=400,
+                    price=10,
+                    round_id=str(current_round_id),
+                )
+            )
+        brandon_yahoo_sell_order = (
+            session.query(SellOrder).filter_by(user_id=str(brandon_yahoo_id)).first().id
+        )
+        brandon_gmail_sell_order = (
+            session.query(SellOrder).filter_by(user_id=str(brandon_gmail_id)).first().id
+        )
 
 
 if __name__ == "__main__":

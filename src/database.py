@@ -5,6 +5,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    Enum,
     Float,
     ForeignKey,
     String,
@@ -184,6 +185,7 @@ class ChatRoom(Base):
 
     seller_id = Column(UUID, ForeignKey("users.id"), nullable=False)
     buyer_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    is_deal_closed = Column(Boolean, nullable=False, server_default="f")
     is_revealed = Column(Boolean, nullable=False, server_default="f")
 
     __table_args__ = (UniqueConstraint("seller_id", "buyer_id"),)
@@ -195,6 +197,20 @@ class Chat(Base):
     chat_room_id = Column(UUID, ForeignKey("chat_rooms.id"), nullable=False)
     message = Column(Text, nullable=False)
     author_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+
+
+class Offer(Base):
+    __tablename__ = "offers"
+
+    chat_room_id = Column(UUID, ForeignKey("chat_rooms.id"), nullable=False)
+    price = Column(Float, nullable=False)
+    number_of_shares = Column(Float, nullable=False)
+    author_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    offer_status = Column(
+        Enum("ACCEPTED", "REJECTED", "PENDING", name="offer_statuses"),
+        nullable=False,
+        server_default="PENDING",
+    )
 
 
 class UserRequest(Base):
