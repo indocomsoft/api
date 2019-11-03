@@ -1,9 +1,9 @@
 from functools import wraps
 
-from sanic import Blueprint, response
+from sanic import Blueprint
 from sanic.response import json
 
-from src.exceptions import InvalidAuthorizationTokenException
+from src.exceptions import InvalidAuthorizationTokenException, ResourceNotOwnedException
 from src.utils import expects_json_object
 
 blueprint = Blueprint("root", version="v1")
