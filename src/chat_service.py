@@ -65,6 +65,7 @@ class ChatSocketService(socketio.AsyncNamespace):
             message=data.get("message"),
             author_id=user_id,
             user_type=data.get("user_type"),
+            author_hidden_id=data.get("author_hidden_id"),
         )
 
         await self.emit("res_new_message", chat, room=room_id)
@@ -78,6 +79,7 @@ class ChatSocketService(socketio.AsyncNamespace):
             price=data.get("price"),
             number_of_shares=data.get("number_of_shares"),
             user_type=data.get("user_type"),
+            author_hidden_id=data.get("author_hidden_id"),
         )
         await self.emit("res_new_offer", offer, room=room_id)
 

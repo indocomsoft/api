@@ -185,6 +185,8 @@ class ChatRoom(Base):
 
     seller_id = Column(UUID, ForeignKey("users.id"), nullable=False)
     buyer_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    seller_hidden_id = Column(UUID, nullable=False)
+    buyer_hidden_id = Column(UUID, nullable=False)
     is_deal_closed = Column(Boolean, nullable=False, server_default="f")
     is_revealed = Column(Boolean, nullable=False, server_default="f")
 
@@ -197,6 +199,7 @@ class Chat(Base):
     chat_room_id = Column(UUID, ForeignKey("chat_rooms.id"), nullable=False)
     message = Column(Text, nullable=False)
     author_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    author_hidden_id = Column(UUID, nullable=False)
 
 
 class Offer(Base):
@@ -211,6 +214,7 @@ class Offer(Base):
         nullable=False,
         server_default="PENDING",
     )
+    author_hidden_id = Column(UUID, nullable=False)
 
 
 class UserRequest(Base):

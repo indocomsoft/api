@@ -521,7 +521,7 @@ class OfferService:
         self.config = config
 
     def create_new_offer(
-        self, chat_room_id, author_id, price, number_of_shares, user_type
+        self, chat_room_id, author_id, price, number_of_shares, user_type, author_hidden_id
     ):
         with session_scope() as session:
             OfferService._check_deal_status(
@@ -536,6 +536,7 @@ class OfferService:
                 price=price,
                 number_of_shares=number_of_shares,
                 author_id=str(author_id),
+                author_hidden_id=author_hidden_id,
             )
             offer = OfferService._get_current_offer(session=session, offer=offer)
             OfferService._update_chatroom_datetime(
@@ -630,6 +631,7 @@ class OfferService:
             "offer_status": offer.get("offer_status"),
             "created_at": datetime.timestamp(offer.get("created_at")) * 1000,
             "type": "offer",
+            "author_hidden_id": offer.get("author_hidden_id")
         }
 
     @staticmethod
@@ -672,7 +674,7 @@ class ChatService:
     def __init__(self, config):
         self.config = config
 
-    def create_new_message(self, chat_room_id, message, author_id, user_type):
+    def create_new_message(self, chat_room_id, message, author_id, user_type, author_hidden_id):
         with session_scope() as session:
             chat_room = session.query(ChatRoom).get(chat_room_id)
             if chat_room is None:
@@ -684,6 +686,7 @@ class ChatService:
                 chat_room_id=str(chat_room_id),
                 message=message,
                 author_id=str(author_id),
+                author_hidden_id=str(author_hidden_id),
             )
             message = ChatService._get_current_message(session=session, message=message)
             ChatService._update_chatroom_datetime(
@@ -736,6 +739,8 @@ class ChatService:
                 "buyer_number_of_shares": buy_order.get("number_of_shares"),
                 "updated_at": datetime.timestamp(chat_room.get("updated_at")) * 1000,
                 "is_deal_closed": chat_room.get("is_deal_closed"),
+                "buyer_hidden_id": chat_room.get("buyer_hidden_id"),
+                "seller_hidden_id": chat_room.get("seller_hidden_id"),
                 "conversation": sorted(
                     messages + offers, key=lambda item: item["created_at"]
                 ),
@@ -747,6 +752,7 @@ class ChatService:
             "id": message.get("id"),
             "message": message.get("message"),
             "created_at": datetime.timestamp(message.get("created_at")) * 1000,
+            "author_hidden_id": message.get("author_hidden_id"),
             "type": "message",
         }
 
@@ -834,6 +840,8 @@ class ChatRoomService:
             "seller_number_of_shares": sell_order.get("number_of_shares"),
             "buyer_price": buy_order.get("price"),
             "buyer_number_of_shares": buy_order.get("number_of_shares"),
+            "buyer_hidden_id": chat_room.get("buyer_hidden_id"),
+            "seller_hidden_id": chat_room.get("seller_hidden_id"),
             "updated_at": datetime.timestamp(chat_room.get("updated_at")) * 1000,
         }
 

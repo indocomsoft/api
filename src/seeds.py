@@ -71,7 +71,10 @@ def seed_db():
         ):
             session.add(
                 ChatRoom(
-                    buyer_id=str(brandon_yahoo_id), seller_id=str(brandon_gmail_id)
+                    buyer_id=str(brandon_yahoo_id),
+                    seller_id=str(brandon_gmail_id),
+                    buyer_hidden_id=str(uuid.uuid4()),
+                    seller_hidden_id=str(uuid.uuid4())
                 )
             )
         if (
@@ -80,7 +83,10 @@ def seed_db():
         ):
             session.add(
                 ChatRoom(
-                    buyer_id=str(brandon_gmail_id), seller_id=str(brandon_yahoo_id)
+                    buyer_id=str(brandon_gmail_id), 
+                    seller_id=str(brandon_yahoo_id),
+                    buyer_hidden_id=str(uuid.uuid4()),
+                    seller_hidden_id=str(uuid.uuid4())
                 )
             )
 
