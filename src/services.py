@@ -760,6 +760,7 @@ class ChatService:
                 "buyer_price": buy_order.get("price"),
                 "buyer_number_of_shares": buy_order.get("number_of_shares"),
                 "updated_at": datetime.timestamp(chat_room.get("updated_at")) * 1000,
+                "is_deal_closed": chat_room.get("is_deal_closed"),
                 "conversation": sorted(
                     messages + offers, key=lambda item: item["created_at"]
                 ),
