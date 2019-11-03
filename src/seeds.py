@@ -1,8 +1,6 @@
 import uuid
 from datetime import datetime
 
-from passlib.hash import argon2
-
 from src.database import (
     BuyOrder,
     Chat,

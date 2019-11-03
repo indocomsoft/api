@@ -1,16 +1,15 @@
 from unittest.mock import patch
 
 import pytest
-from passlib.hash import plaintext
 
 from src.config import APP_CONFIG
 from src.database import User, UserRequest, session_scope
-from src.exceptions import ResourceNotFoundException, UnauthorizedException
+from src.exceptions import ResourceNotFoundException
 from src.services import UserService
-from tests.fixtures import attributes_for_user, create_user
+from tests.fixtures import create_user
 from tests.utils import assert_dict_in
 
-user_service = UserService(config=APP_CONFIG, hasher=plaintext)
+user_service = UserService(config=APP_CONFIG)
 
 
 def test_create__is_buy():

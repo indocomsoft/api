@@ -4,9 +4,9 @@ import pytest
 from apscheduler.schedulers.base import BaseScheduler
 
 from src.config import APP_CONFIG
-from src.database import BuyOrder, Round, Security, SellOrder, User, session_scope
+from src.database import BuyOrder, Round, SellOrder, session_scope
 from src.exceptions import ResourceNotOwnedException, UnauthorizedException
-from src.services import MatchService, SellOrderService
+from src.services import SellOrderService
 from tests.fixtures import (
     create_buy_order,
     create_security,

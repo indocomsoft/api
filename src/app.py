@@ -28,22 +28,20 @@ from src.services import (
     UserService,
 )
 
-"""
-def sentry_before_send(event, hint):
-    if "exc_info" in hint:
-        _exc_type, exc_value, _tb = hint["exc_info"]
-        if isinstance(exc_value, AcquityException):
-            return None
-    return event
-
-
 if APP_CONFIG["SENTRY_ENABLE"]:
+
+    def sentry_before_send(event, hint):
+        if "exc_info" in hint:
+            _exc_type, exc_value, _tb = hint["exc_info"]
+            if isinstance(exc_value, AcquityException):
+                return None
+        return event
+
     sentry_sdk.init(
         dsn="https://1d45f7681dca45e8b8a83842dd6303b8@sentry.io/1800796",
         integrations=[SanicIntegration(), SqlalchemyIntegration()],
         before_send=sentry_before_send,
     )
-"""
 
 app = Sanic(load_env=False)
 app.config.update(APP_CONFIG)

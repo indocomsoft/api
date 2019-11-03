@@ -2,7 +2,6 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 import requests
-from passlib.hash import argon2
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql import func
@@ -44,9 +43,8 @@ from src.schemata import (
 
 
 class UserService:
-    def __init__(self, config, hasher=argon2):
+    def __init__(self, config):
         self.config = config
-        self.hasher = hasher
         self.email_service = EmailService(config)
 
     def create_if_not_exists(
@@ -851,9 +849,11 @@ class LinkedInLogin:
                 "client_secret": self.config.get("CLIENT_SECRET"),
             },
         )
-        if res.status_code == 401:
+        json_res = res.json()
+        if json_res.get("access_token") is None:
+            print(res)
             raise UserProfileNotFoundException("Token retrieval failed.")
-        return res.json()
+        return json_res
 
     @staticmethod
     def _get_user_profile(token):

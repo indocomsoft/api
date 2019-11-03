@@ -5,7 +5,6 @@ Revises: 6fb9fbed5f20
 Create Date: 2019-10-20 17:36:19.967936
 
 """
-import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 from alembic import op

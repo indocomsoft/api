@@ -1,17 +1,7 @@
-from datetime import datetime
 from unittest.mock import call, patch
 
 from src.config import APP_CONFIG
-from src.database import (
-    BuyOrder,
-    ChatRoom,
-    Match,
-    Round,
-    Security,
-    SellOrder,
-    User,
-    session_scope,
-)
+from src.database import ChatRoom, Match, Round, session_scope
 from src.services import MatchService
 from tests.fixtures import (
     create_banned_pair,
@@ -34,10 +24,10 @@ def test_run_matches():
 
     buy_order = create_buy_order("1", round_id=round["id"], user_id=buy_user["id"])
     buy_order_id = buy_order["id"]
-    buy_order2 = create_buy_order("2", round_id=round["id"], user_id=buy_user2["id"])
+    create_buy_order("2", round_id=round["id"], user_id=buy_user2["id"])
     sell_order = create_sell_order("3", round_id=round["id"], user_id=sell_user["id"])
     sell_order_id = sell_order["id"]
-    sell_order2 = create_sell_order("4", round_id=round["id"], user_id=sell_user2["id"])
+    create_sell_order("4", round_id=round["id"], user_id=sell_user2["id"])
 
     with patch(
         "src.services.match_buyers_and_sellers",

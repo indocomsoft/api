@@ -1,9 +1,8 @@
 from datetime import datetime, timedelta
 
 from src.config import APP_CONFIG
-from src.database import Round, Security, SellOrder, User, session_scope
 from src.services import RoundService
-from tests.fixtures import attributes_for_round, create_round, create_sell_order
+from tests.fixtures import create_round, create_sell_order
 
 round_service = RoundService(config=APP_CONFIG)
 
@@ -38,14 +37,14 @@ def test_get_active__all_concluded():
 
 
 def test_should_round_start__unique_sellers():
-    create_sell_order("1", number_of_shares=5)
+    create_sell_order("1", number_of_shares=5, round_id=None)
     assert not round_service.should_round_start()
-    create_sell_order("2", number_of_shares=5)
+    create_sell_order("2", number_of_shares=5, round_id=None)
     assert round_service.should_round_start()
-    create_sell_order("3", number_of_shares=5)
+    create_sell_order("3", number_of_shares=5, round_id=None)
     assert round_service.should_round_start()
 
 
-def test_should_round_start__unique_sellers():
+def test_should_round_start__big_shares_amount():
     create_sell_order("1", number_of_shares=1000, round_id=None)
     assert round_service.should_round_start()
