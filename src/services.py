@@ -524,14 +524,9 @@ class OfferService:
         self, chat_room_id, author_id, price, number_of_shares, user_type
     ):
         with session_scope() as session:
+            OfferService._check_deal_status(
+                session=session, chat_room_id=chat_room_id,user_id=author_id,user_type=user_type)
             chat_room = session.query(ChatRoom).get(chat_room_id)
-            if chat_room is None:
-                raise ResourceNotFoundException("Chat room not found")
-            if chat_room.is_deal_closed:
-                raise InvalidRequestException("Deal is closed")
-            OfferService._verify_user(
-                chat_room=chat_room, user_id=author_id, user_type=user_type
-            )
             offer = Offer(
                 chat_room_id=str(chat_room_id),
                 price=price,
@@ -550,12 +545,9 @@ class OfferService:
 
     def accept_offer(self, chat_room_id, offer_id, user_id, user_type):
         with session_scope() as session:
+            OfferService._check_deal_status(
+                session=session, chat_room_id=chat_room_id,user_id=user_id,user_type=user_type)
             chat_room = session.query(ChatRoom).get(chat_room_id)
-            if chat_room is None:
-                raise ResourceNotFoundException("Chat room not found")
-            OfferService._verify_user(
-                chat_room=chat_room, user_id=user_id, user_type=user_type
-            )
             offer = session.query(Offer).filter_by(id=offer_id).one()
 
             if offer.offer_status != "PENDING":
@@ -576,13 +568,9 @@ class OfferService:
 
     def reject_offer(self, chat_room_id, offer_id, user_id, user_type):
         with session_scope() as session:
+            OfferService._check_deal_status(
+                session=session, chat_room_id=chat_room_id,user_id=user_id,user_type=user_type)
             chat_room = session.query(ChatRoom).get(chat_room_id)
-            if chat_room is None:
-                raise ResourceNotFoundException("Chat room not found")
-            OfferService._verify_user(
-                chat_room=chat_room, user_id=user_id, user_type=user_type
-            )
-
             offer = session.query(Offer).filter_by(id=offer_id).one()
             if offer.offer_status != "PENDING":
                 raise InvalidRequestException("Offer is closed")
@@ -609,6 +597,17 @@ class OfferService:
             for result in results:
                 data.append(OfferService._serialize_offer(offer=result.asdict()))
             return data
+
+    @staticmethod
+    def _check_deal_status(session, chat_room_id, user_id, user_type):
+        chat_room = session.query(ChatRoom).get(chat_room_id)
+        if chat_room is None:
+            raise ResourceNotFoundException("Chat room not found")
+        if chat_room.is_deal_closed:
+            raise InvalidRequestException("Deal is closed")
+        OfferService._verify_user(
+                chat_room=chat_room, user_id=user_id, user_type=user_type
+            )
 
     @staticmethod
     def _serialize_offer(offer):
