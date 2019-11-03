@@ -5,11 +5,11 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    Enum,
     Float,
     ForeignKey,
     String,
     Text,
-    Enum,
     UniqueConstraint,
     create_engine,
     func,
@@ -206,7 +206,11 @@ class Offer(Base):
     price = Column(Float, nullable=False)
     number_of_shares = Column(Float, nullable=False)
     author_id = Column(UUID, ForeignKey("users.id"), nullable=False)
-    offer_status = Column(Enum('ACCEPTED', 'REJECTED', 'PENDING', name='offer_statuses'), nullable=False, server_default="PENDING")
+    offer_status = Column(
+        Enum("ACCEPTED", "REJECTED", "PENDING", name="offer_statuses"),
+        nullable=False,
+        server_default="PENDING",
+    )
 
 
 class UserRequest(Base):

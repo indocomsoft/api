@@ -537,7 +537,7 @@ class OfferService:
             "chat_room_id": chat_room_id,
             "updated_at": datetime.timestamp(offer.get("created_at")) * 1000,
             "new_chat": OfferService._serialize_offer(offer=offer, user_id=user_id),
-            "is_deal_closed": is_deal_closed
+            "is_deal_closed": is_deal_closed,
         }
 
     @staticmethod
@@ -566,7 +566,6 @@ class OfferService:
         offer.offer_status = offer_status
         session.commit()
 
-
     def create_new_offer(
         self, chat_room_id, author_id, price, number_of_shares, user_type
     ):
@@ -585,15 +584,13 @@ class OfferService:
             )
             offer = OfferService._get_current_offer(session=session, offer=offer)
             OfferService._update_chatroom_datetime(
-                session=session, 
-                chat_room=chat_room, 
-                offer=offer
+                session=session, chat_room=chat_room, offer=offer
             )
             return OfferService._serialize_chat_offer(
-                chat_room_id=chat_room_id, 
-                offer=offer, 
-                user_id=author_id, 
-                is_deal_closed=chat_room.is_deal_closed
+                chat_room_id=chat_room_id,
+                offer=offer,
+                user_id=author_id,
+                is_deal_closed=chat_room.is_deal_closed,
             )
 
     def accept_offer(self, chat_room_id, offer_id, user_id, user_type):
@@ -610,17 +607,17 @@ class OfferService:
                 raise InvalidRequestException("Offer is closed")
             if offer.author_id != user_id:
                 OfferService._update_offer_status(
-                    session=session, 
-                    chat_room=chat_room, 
-                    offer=offer, 
-                    offer_status="ACCEPTED"
+                    session=session,
+                    chat_room=chat_room,
+                    offer=offer,
+                    offer_status="ACCEPTED",
                 )
             offer = OfferService._get_current_offer(session=session, offer=offer)
             return OfferService._serialize_chat_offer(
-                chat_room_id=chat_room_id, 
-                offer=offer, 
-                user_id=user_id, 
-                is_deal_closed=chat_room.is_deal_closed
+                chat_room_id=chat_room_id,
+                offer=offer,
+                user_id=user_id,
+                is_deal_closed=chat_room.is_deal_closed,
             )
 
     def reject_offer(self, chat_room_id, offer_id, user_id, user_type):
@@ -631,25 +628,25 @@ class OfferService:
             OfferService._verify_user(
                 chat_room=chat_room, user_id=user_id, user_type=user_type
             )
-            
+
             offer = session.query(Offer).filter_by(id=offer_id).one()
             if offer.offer_status != "PENDING":
                 raise InvalidRequestException("Offer is closed")
             OfferService._update_offer_status(
-                session=session, 
-                chat_room=chat_room, 
-                offer=offer, 
-                offer_status="REJECTED"
+                session=session,
+                chat_room=chat_room,
+                offer=offer,
+                offer_status="REJECTED",
             )
             offer = OfferService._get_current_offer(session=session, offer=offer)
             OfferService._update_chatroom_datetime(
                 session=session, chat_room=chat_room, offer=offer
             )
             return OfferService._serialize_chat_offer(
-                chat_room_id=chat_room_id, 
-                offer=offer, 
-                user_id=user_id, 
-                is_deal_closed=chat_room.is_deal_closed
+                chat_room_id=chat_room_id,
+                offer=offer,
+                user_id=user_id,
+                is_deal_closed=chat_room.is_deal_closed,
             )
 
     def get_chat_offers(self, user_id, chat_room_id):
