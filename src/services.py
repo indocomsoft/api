@@ -525,7 +525,11 @@ class OfferService:
     ):
         with session_scope() as session:
             OfferService._check_deal_status(
-                session=session, chat_room_id=chat_room_id,user_id=author_id,user_type=user_type)
+                session=session,
+                chat_room_id=chat_room_id,
+                user_id=author_id,
+                user_type=user_type,
+            )
             chat_room = session.query(ChatRoom).get(chat_room_id)
             offer = Offer(
                 chat_room_id=str(chat_room_id),
@@ -546,7 +550,11 @@ class OfferService:
     def accept_offer(self, chat_room_id, offer_id, user_id, user_type):
         with session_scope() as session:
             OfferService._check_deal_status(
-                session=session, chat_room_id=chat_room_id,user_id=user_id,user_type=user_type)
+                session=session,
+                chat_room_id=chat_room_id,
+                user_id=user_id,
+                user_type=user_type,
+            )
             chat_room = session.query(ChatRoom).get(chat_room_id)
             offer = session.query(Offer).filter_by(id=offer_id).one()
 
@@ -569,7 +577,11 @@ class OfferService:
     def reject_offer(self, chat_room_id, offer_id, user_id, user_type):
         with session_scope() as session:
             OfferService._check_deal_status(
-                session=session, chat_room_id=chat_room_id,user_id=user_id,user_type=user_type)
+                session=session,
+                chat_room_id=chat_room_id,
+                user_id=user_id,
+                user_type=user_type,
+            )
             chat_room = session.query(ChatRoom).get(chat_room_id)
             offer = session.query(Offer).filter_by(id=offer_id).one()
             if offer.offer_status != "PENDING":
@@ -606,8 +618,8 @@ class OfferService:
         if chat_room.is_deal_closed:
             raise InvalidRequestException("Deal is closed")
         OfferService._verify_user(
-                chat_room=chat_room, user_id=user_id, user_type=user_type
-            )
+            chat_room=chat_room, user_id=user_id, user_type=user_type
+        )
 
     @staticmethod
     def _serialize_offer(offer):
