@@ -8,6 +8,7 @@ from src.database import (
     Security,
     SellOrder,
     User,
+    UserRequest,
     session_scope,
 )
 
@@ -149,3 +150,19 @@ def create_banned_pair(id=0, **kwargs):
         session.add(banned_pair)
         session.commit()
         return banned_pair.asdict()
+
+
+def create_user_request(id=0, **kwargs):
+    with session_scope() as session:
+        user_request = UserRequest(
+            **combine_dicts(
+                kwargs,
+                {
+                    "user_id": lambda: create_user(str(id))["id"],
+                    "is_buy": lambda: False,
+                },
+            )
+        )
+        session.add(user_request)
+        session.commit()
+        return user_request.asdict()

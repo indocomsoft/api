@@ -178,20 +178,10 @@ async def linkedin_auth_callback(request):
     return json(request.app.linkedin_login.authenticate(**request.json))
 
 
-@blueprint.get("/requests/buy/")
+@blueprint.get("/requests/")
 @auth_required
-async def get_buy_requests(request, user):
-    return json(
-        request.app.user_request_service.get_buy_requests(subject_id=user["id"])
-    )
-
-
-@blueprint.get("/requests/sell/")
-@auth_required
-async def get_sell_requests(request, user):
-    return json(
-        request.app.user_request_service.get_sell_requests(subject_id=user["id"])
-    )
+async def get_requests(request, user):
+    return json(request.app.user_request_service.get_requests(subject_id=user["id"]))
 
 
 @blueprint.post("/requests/<id>")

@@ -752,22 +752,47 @@ class UserRequestService:
         self.email_service = EmailService(config)
 
     @validate_input({"subject_id": UUID_RULE})
-    def get_buy_requests(self, subject_id):
+    def get_requests(self, subject_id):
         with session_scope() as session:
             if not session.query(User).get(subject_id).is_committee:
                 raise InvisibleUnauthorizedException("Not committee")
 
-            buy_requests = session.query(UserRequest).filter_by(is_buy=True).all()
-            return [buy_request.asdict() for buy_request in buy_requests]
-
-    @validate_input({"subject_id": UUID_RULE})
-    def get_sell_requests(self, subject_id):
-        with session_scope() as session:
-            if not session.query(User).get(subject_id).is_committee:
-                raise InvisibleUnauthorizedException("Not committee")
-
-            sell_requests = session.query(BuyOrder).filter_by(is_buy=False).all()
-            return [sell_request.asdict() for sell_request in sell_requests]
+            buy_requests = (
+                session.query(UserRequest, User)
+                .join(User, User.id == UserRequest.user_id)
+                .filter(UserRequest.is_buy == True)
+                .all()
+            )
+            sell_requests = (
+                session.query(UserRequest, User)
+                .join(User, User.id == UserRequest.user_id)
+                .filter(UserRequest.is_buy == False)
+                .all()
+            )
+            return {
+                "buyers": [
+                    {
+                        **r[0].asdict(),
+                        **{
+                            k: v
+                            for k, v in r[1].asdict().items()
+                            if k not in ["created_at", "updated_at"]
+                        },
+                    }
+                    for r in buy_requests
+                ],
+                "sellers": [
+                    {
+                        **r[0].asdict(),
+                        **{
+                            k: v
+                            for k, v in r[1].asdict().items()
+                            if k not in ["created_at", "updated_at"]
+                        },
+                    }
+                    for r in sell_requests
+                ],
+            }
 
     @validate_input({"request_id": UUID_RULE, "subject_id": UUID_RULE})
     def approve_request(self, request_id, subject_id):
@@ -784,12 +809,12 @@ class UserRequestService:
                     emails=[user.email], template="approved_buyer"
                 )
             else:
-                user.can_sell = False
+                user.can_sell = True
                 self.email_service.send_email(
                     emails=[user.email], template="approved_seller"
                 )
 
-            request.delete()
+            session.delete(request)
 
     @validate_input({"request_id": UUID_RULE, "subject_id": UUID_RULE})
     def reject_request(self, request_id, subject_id):
@@ -802,6 +827,6 @@ class UserRequestService:
 
             email_template = "rejected_buyer" if request.is_buy else "rejected_seller"
 
-            request.delete()
+            session.delete(request)
 
             self.email_service.send_email(emails=[user.email], template=email_template)
