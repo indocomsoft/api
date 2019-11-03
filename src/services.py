@@ -22,6 +22,7 @@ from src.database import (
 )
 from src.email_service import EmailService
 from src.exceptions import (
+    InvalidRequestException,
     InvisibleUnauthorizedException,
     ResourceNotFoundException,
     ResourceNotOwnedException,
@@ -573,6 +574,8 @@ class OfferService:
             chat_room = session.query(ChatRoom).get(chat_room_id)
             if chat_room == None:
                 raise ResourceNotFoundException("Chat room not found")
+            if chat_room.is_deal_closed == True:
+                raise InvalidRequestException("Deal is closed")
             OfferService._verify_user(
                 chat_room=chat_room, user_id=author_id, user_type=user_type
             )
