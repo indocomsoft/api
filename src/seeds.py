@@ -20,14 +20,14 @@ def seed_db():
         # add users
         user_seeds = [
             {
-                "email": "nwjbrandon@outlook.com",
+                "email": "nwjbrandon.lexonous@gmail.com",
                 "provider": "linkedin",
                 "full_name": "Brandon Ng",
                 "display_image_url": None,
                 "can_buy": True,
                 "can_sell": True,
                 "is_committee": True,
-                "user_id": "z_1i-r7yV2",
+                "user_id": "UiYX0uP7Cf",
             },
             {
                 "email": "brandon.ng10@yahoo.com.sg",
@@ -55,7 +55,10 @@ def seed_db():
                     )
                 )
         brandon_gmail_id = (
-            session.query(User).filter_by(email="nwjbrandon@outlook.com").first().id
+            session.query(User)
+            .filter_by(email="nwjbrandon.lexonous@gmail.com")
+            .first()
+            .id
         )
         brandon_yahoo_id = (
             session.query(User).filter_by(email="brandon.ng10@yahoo.com.sg").first().id

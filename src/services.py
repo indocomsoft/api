@@ -521,23 +521,22 @@ class OfferService:
         self.config = config
 
     @staticmethod
-    def _serialize_offer(offer, user_id):
+    def _serialize_offer(offer):
         return {
             "id": offer.get("id"),
             "price": offer.get("price"),
             "number_of_shares": offer.get("number_of_shares"),
             "offer_status": offer.get("offer_status"),
             "created_at": datetime.timestamp(offer.get("created_at")) * 1000,
-            "is_author": offer.get("author_id") == user_id,
             "type": "offer",
         }
 
     @staticmethod
-    def _serialize_chat_offer(chat_room_id, offer, user_id, is_deal_closed):
+    def _serialize_chat_offer(chat_room_id, offer, is_deal_closed):
         return {
             "chat_room_id": chat_room_id,
             "updated_at": datetime.timestamp(offer.get("created_at")) * 1000,
-            "new_chat": OfferService._serialize_offer(offer=offer, user_id=user_id),
+            "new_chat": OfferService._serialize_offer(offer=offer),
             "is_deal_closed": is_deal_closed,
         }
 
@@ -592,7 +591,6 @@ class OfferService:
             return OfferService._serialize_chat_offer(
                 chat_room_id=chat_room_id,
                 offer=offer,
-                user_id=author_id,
                 is_deal_closed=chat_room.is_deal_closed,
             )
 
@@ -619,7 +617,6 @@ class OfferService:
             return OfferService._serialize_chat_offer(
                 chat_room_id=chat_room_id,
                 offer=offer,
-                user_id=user_id,
                 is_deal_closed=chat_room.is_deal_closed,
             )
 
@@ -648,7 +645,6 @@ class OfferService:
             return OfferService._serialize_chat_offer(
                 chat_room_id=chat_room_id,
                 offer=offer,
-                user_id=user_id,
                 is_deal_closed=chat_room.is_deal_closed,
             )
 
@@ -657,11 +653,7 @@ class OfferService:
             results = session.query(Offer).filter_by(chat_room_id=chat_room_id).all()
             data = []
             for result in results:
-                data.append(
-                    OfferService._serialize_offer(
-                        offer=result.asdict(), user_id=user_id
-                    )
-                )
+                data.append(OfferService._serialize_offer(offer=result.asdict()))
             return data
 
 
@@ -670,23 +662,20 @@ class ChatService:
         self.config = config
 
     @staticmethod
-    def _serialize_message(message, user_id):
+    def _serialize_message(message):
         return {
             "id": message.get("id"),
             "message": message.get("message"),
             "created_at": datetime.timestamp(message.get("created_at")) * 1000,
-            "is_author": message.get("author_id") == user_id,
             "type": "message",
         }
 
     @staticmethod
-    def _serialize_chat_message(chat_room_id, message, user_id):
+    def _serialize_chat_message(chat_room_id, message):
         return {
             "chat_room_id": chat_room_id,
             "updated_at": datetime.timestamp(message.get("created_at")) * 1000,
-            "new_chat": ChatService._serialize_message(
-                message=message, user_id=user_id
-            ),
+            "new_chat": ChatService._serialize_message(message=message),
         }
 
     @staticmethod
@@ -726,7 +715,7 @@ class ChatService:
                 session=session, chat_room=chat_room, message=message
             )
             return ChatService._serialize_chat_message(
-                chat_room_id=chat_room_id, message=message, user_id=author_id
+                chat_room_id=chat_room_id, message=message
             )
 
     def get_chat_messages(self, user_id, chat_room_id):
@@ -734,11 +723,7 @@ class ChatService:
             results = session.query(Chat).filter_by(chat_room_id=chat_room_id).all()
             data = []
             for result in results:
-                data.append(
-                    ChatService._serialize_message(
-                        message=result.asdict(), user_id=user_id
-                    )
-                )
+                data.append(ChatService._serialize_message(message=result.asdict()))
             return data
 
     def get_conversation(self, user_id, chat_room_id, user_type):
