@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     String,
     Text,
+    Enum,
     UniqueConstraint,
     create_engine,
     func,
@@ -184,6 +185,7 @@ class ChatRoom(Base):
 
     seller_id = Column(UUID, ForeignKey("users.id"), nullable=False)
     buyer_id = Column(UUID, ForeignKey("users.id"), nullable=False)
+    is_deal_closed = Column(Boolean, nullable=False, server_default="f")
     is_revealed = Column(Boolean, nullable=False, server_default="f")
 
     __table_args__ = (UniqueConstraint("seller_id", "buyer_id"),)
@@ -204,8 +206,7 @@ class Offer(Base):
     price = Column(Float, nullable=False)
     number_of_shares = Column(Float, nullable=False)
     author_id = Column(UUID, ForeignKey("users.id"), nullable=False)
-    is_agreeable = Column(Boolean, nullable=False, server_default="f")
-    is_rejected = Column(Boolean, nullable=False, server_default="f")
+    offer_status = Column(Enum('ACCEPTED', 'REJECTED', 'PENDING', name='offer_statuses'), nullable=False, server_default="PENDING")
 
 
 class UserRequest(Base):

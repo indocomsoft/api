@@ -525,19 +525,19 @@ class OfferService:
             "id": offer.get("id"),
             "price": offer.get("price"),
             "number_of_shares": offer.get("number_of_shares"),
-            "is_agreeable": offer.get("is_agreeable"),
-            "is_rejected": offer.get("is_rejected"),
-            "updated_at": datetime.timestamp(offer.get("updated_at")) * 1000,
+            "offer_status": offer.get("offer_status"),
+            "created_at": datetime.timestamp(offer.get("created_at")) * 1000,
             "is_author": offer.get("author_id") == user_id,
             "type": "offer",
         }
 
     @staticmethod
-    def _serialize_chat_offer(chat_room_id, offer, user_id):
+    def _serialize_chat_offer(chat_room_id, offer, user_id, is_deal_closed):
         return {
             "chat_room_id": chat_room_id,
-            "updated_at": datetime.timestamp(offer.get("updated_at")) * 1000,
+            "updated_at": datetime.timestamp(offer.get("created_at")) * 1000,
             "new_chat": OfferService._serialize_offer(offer=offer, user_id=user_id),
+            "is_deal_closed": is_deal_closed
         }
 
     @staticmethod
@@ -549,7 +549,7 @@ class OfferService:
 
     @staticmethod
     def _update_chatroom_datetime(session, chat_room, offer):
-        chat_room.updated_at = offer.get("updated_at")
+        chat_room.updated_at = offer.get("created_at")
         session.commit()
 
     @staticmethod
@@ -558,6 +558,14 @@ class OfferService:
             user_type == "seller" and chat_room.seller_id != user_id
         ):
             raise ResourceNotOwnedException("Wrong user")
+
+    @staticmethod
+    def _update_offer_status(session, offer, chat_room, offer_status):
+        chat_room.updated_at = offer.created_at
+        chat_room.is_deal_closed = True
+        offer.offer_status = offer_status
+        session.commit()
+
 
     def create_new_offer(
         self, chat_room_id, author_id, price, number_of_shares, user_type
@@ -577,10 +585,15 @@ class OfferService:
             )
             offer = OfferService._get_current_offer(session=session, offer=offer)
             OfferService._update_chatroom_datetime(
-                session=session, chat_room=chat_room, offer=offer
+                session=session, 
+                chat_room=chat_room, 
+                offer=offer
             )
             return OfferService._serialize_chat_offer(
-                chat_room_id=chat_room_id, offer=offer, user_id=author_id
+                chat_room_id=chat_room_id, 
+                offer=offer, 
+                user_id=author_id, 
+                is_deal_closed=chat_room.is_deal_closed
             )
 
     def accept_offer(self, chat_room_id, offer_id, user_id, user_type):
@@ -593,14 +606,21 @@ class OfferService:
             )
             offer = session.query(Offer).filter_by(id=offer_id).one()
 
+            if offer.offer_status != "PENDING":
+                raise InvalidRequestException("Offer is closed")
             if offer.author_id != user_id:
-                offer.is_agreeable = True
+                OfferService._update_offer_status(
+                    session=session, 
+                    chat_room=chat_room, 
+                    offer=offer, 
+                    offer_status="ACCEPTED"
+                )
             offer = OfferService._get_current_offer(session=session, offer=offer)
-            OfferService._update_chatroom_datetime(
-                session=session, chat_room=chat_room, offer=offer
-            )
             return OfferService._serialize_chat_offer(
-                chat_room_id=chat_room_id, offer=offer, user_id=user_id
+                chat_room_id=chat_room_id, 
+                offer=offer, 
+                user_id=user_id, 
+                is_deal_closed=chat_room.is_deal_closed
             )
 
     def reject_offer(self, chat_room_id, offer_id, user_id, user_type):
@@ -611,14 +631,25 @@ class OfferService:
             OfferService._verify_user(
                 chat_room=chat_room, user_id=user_id, user_type=user_type
             )
+            
             offer = session.query(Offer).filter_by(id=offer_id).one()
-            offer.is_rejected = True
+            if offer.offer_status != "PENDING":
+                raise InvalidRequestException("Offer is closed")
+            OfferService._update_offer_status(
+                session=session, 
+                chat_room=chat_room, 
+                offer=offer, 
+                offer_status="REJECTED"
+            )
             offer = OfferService._get_current_offer(session=session, offer=offer)
             OfferService._update_chatroom_datetime(
                 session=session, chat_room=chat_room, offer=offer
             )
             return OfferService._serialize_chat_offer(
-                chat_room_id=chat_room_id, offer=offer, user_id=user_id
+                chat_room_id=chat_room_id, 
+                offer=offer, 
+                user_id=user_id, 
+                is_deal_closed=chat_room.is_deal_closed
             )
 
     def get_chat_offers(self, user_id, chat_room_id):
@@ -643,7 +674,7 @@ class ChatService:
         return {
             "id": message.get("id"),
             "message": message.get("message"),
-            "updated_at": datetime.timestamp(message.get("updated_at")) * 1000,
+            "created_at": datetime.timestamp(message.get("created_at")) * 1000,
             "is_author": message.get("author_id") == user_id,
             "type": "message",
         }
@@ -652,7 +683,7 @@ class ChatService:
     def _serialize_chat_message(chat_room_id, message, user_id):
         return {
             "chat_room_id": chat_room_id,
-            "updated_at": datetime.timestamp(message.get("updated_at")) * 1000,
+            "updated_at": datetime.timestamp(message.get("created_at")) * 1000,
             "new_chat": ChatService._serialize_message(
                 message=message, user_id=user_id
             ),
@@ -667,7 +698,7 @@ class ChatService:
 
     @staticmethod
     def _update_chatroom_datetime(session, chat_room, message):
-        chat_room.updated_at = message.get("updated_at")
+        chat_room.updated_at = message.get("created_at")
         session.commit()
 
     @staticmethod
@@ -745,7 +776,7 @@ class ChatService:
                 "buyer_number_of_shares": buy_order.get("number_of_shares"),
                 "updated_at": datetime.timestamp(chat_room.get("updated_at")) * 1000,
                 "conversation": sorted(
-                    messages + offers, key=lambda item: item["updated_at"]
+                    messages + offers, key=lambda item: item["created_at"]
                 ),
             }
 
@@ -758,6 +789,7 @@ class ChatRoomService:
     def _serialize_chat_room(chat_room, buy_order, sell_order):
         return {
             "chat_room_id": chat_room.get("id"),
+            "is_deal_closed": chat_room.get("is_deal_closed"),
             "seller_price": sell_order.get("price"),
             "seller_number_of_shares": sell_order.get("number_of_shares"),
             "buyer_price": buy_order.get("price"),
