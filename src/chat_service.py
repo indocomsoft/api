@@ -19,9 +19,6 @@ class ChatSocketService(socketio.AsyncNamespace):
         self.offer_service = OfferService(config)
         self.config = config
 
-    async def on_req_testing(self, sid, data):
-        await self.emit("res_testing", {"data": "hello world"})
-
     async def _authenticate(self, token):
         linkedin_user = self.linkedin_login._get_user_profile(token=token)
         user = self.user_service.get_user_by_linkedin_id(
@@ -63,7 +60,7 @@ class ChatSocketService(socketio.AsyncNamespace):
     async def on_req_new_message(self, sid, data):
         user_id = await self._authenticate(token=data.get("token"))
         room_id = data.get("chat_room_id")
-        chat = self.chat_service.set_new_message(
+        chat = self.chat_service.create_new_message(
             chat_room_id=data.get("chat_room_id"),
             message=data.get("message"),
             author_id=user_id,
@@ -75,7 +72,7 @@ class ChatSocketService(socketio.AsyncNamespace):
     async def on_req_new_offer(self, sid, data):
         user_id = await self._authenticate(token=data.get("token"))
         room_id = data.get("chat_room_id")
-        offer = self.offer_service.set_new_offer(
+        offer = self.offer_service.create_new_offer(
             author_id=user_id,
             chat_room_id=data.get("chat_room_id"),
             price=data.get("price"),
@@ -87,7 +84,7 @@ class ChatSocketService(socketio.AsyncNamespace):
     async def on_req_accept_offer(self, sid, data):
         user_id = await self._authenticate(token=data.get("token"))
         room_id = data.get("chat_room_id")
-        offer = self.offer_service.set_accept_offer(
+        offer = self.offer_service.accept_offer(
             chat_room_id=room_id,
             offer_id=data.get("offer_id"),
             user_id=user_id,
@@ -98,7 +95,7 @@ class ChatSocketService(socketio.AsyncNamespace):
     async def on_req_decline_offer(self, sid, data):
         user_id = await self._authenticate(token=data.get("token"))
         room_id = data.get("chat_room_id")
-        offer = self.offer_service.set_reject_offer(
+        offer = self.offer_service.reject_offer(
             chat_room_id=room_id,
             offer_id=data.get("offer_id"),
             user_id=user_id,

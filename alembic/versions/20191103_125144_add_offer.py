@@ -1,8 +1,8 @@
 """add offer
 
-Revision ID: bfde46b153db
+Revision ID: 33a3423b63e1
 Revises: ce35232971d0
-Create Date: 2019-11-03 00:44:05.873913
+Create Date: 2019-11-03 12:51:44.618178
 
 """
 import sqlalchemy as sa
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "bfde46b153db"
+revision = "33a3423b63e1"
 down_revision = "ce35232971d0"
 branch_labels = None
 depends_on = None
@@ -38,12 +38,7 @@ def upgrade():
         sa.Column("price", sa.Float(), nullable=False),
         sa.Column("number_of_shares", sa.Float(), nullable=False),
         sa.Column("author_id", postgresql.UUID(), nullable=False),
-        sa.Column(
-            "is_buyer_agreeable", sa.Boolean(), server_default="f", nullable=False
-        ),
-        sa.Column(
-            "is_seller_agreeable", sa.Boolean(), server_default="f", nullable=False
-        ),
+        sa.Column("is_agreeable", sa.Boolean(), server_default="f", nullable=False),
         sa.Column("is_rejected", sa.Boolean(), server_default="f", nullable=False),
         sa.ForeignKeyConstraint(["author_id"], ["users.id"]),
         sa.ForeignKeyConstraint(["chat_room_id"], ["chat_rooms.id"]),

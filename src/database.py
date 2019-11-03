@@ -226,8 +226,7 @@ class Offer(Base):
     price = Column(Float, nullable=False)
     number_of_shares = Column(Float, nullable=False)
     author_id = Column(UUID, ForeignKey("users.id"), nullable=False)
-    is_buyer_agreeable = Column(Boolean, nullable=False, server_default="f")
-    is_seller_agreeable = Column(Boolean, nullable=False, server_default="f")
+    is_agreeable = Column(Boolean, nullable=False, server_default="f")
     is_rejected = Column(Boolean, nullable=False, server_default="f")
 
 
