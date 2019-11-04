@@ -186,7 +186,7 @@ async def get_requests(request, user):
 
 @blueprint.post("/requests/<id>")
 @auth_required
-async def approve_request(request, id, user):
+async def approve_request(request, user, id):
     return json(
         request.app.user_request_service.approve_request(
             request_id=id, subject_id=user["id"]
@@ -196,7 +196,7 @@ async def approve_request(request, id, user):
 
 @blueprint.delete("/requests/<id>")
 @auth_required
-async def reject_request(request, id, user):
+async def reject_request(request, user, id):
     return json(
         request.app.user_request_service.reject_request(
             request_id=id, subject_id=user["id"]
