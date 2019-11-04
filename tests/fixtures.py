@@ -25,13 +25,14 @@ def combine_dicts(original, default_boxed):
 def attributes_for_user(id="", **kwargs):
     return {
         "email": f"a{id}@a",
-        "user_id": f"abcdef{id}",
+        "provider_user_id": f"abcdef{id}",
         "full_name": f"a{id}",
         "display_image_url": "https://loremflickr.com/320/240",
         "can_buy": True,
         "can_sell": True,
         "is_committee": True,
         "provider": f"{id}",
+        "auth_token": None,
         **kwargs,
     }
 
@@ -160,6 +161,7 @@ def create_user_request(id=0, **kwargs):
                 {
                     "user_id": lambda: create_user(str(id))["id"],
                     "is_buy": lambda: False,
+                    "closed_by_user_id": lambda: None,
                 },
             )
         )

@@ -24,7 +24,7 @@ def seed_db():
                 "can_buy": True,
                 "can_sell": True,
                 "is_committee": True,
-                "user_id": "UiYX0uP7Cf",
+                "provider_user_id": "UiYX0uP7Cf",
             },
             {
                 "email": "brandon.ng10@yahoo.com.sg",
@@ -34,7 +34,7 @@ def seed_db():
                 "can_buy": True,
                 "can_sell": True,
                 "is_committee": True,
-                "user_id": "8tJpx5jWUx",
+                "provider_user_id": "8tJpx5jWUx",
             },
         ]
         for user in user_seeds:
@@ -48,7 +48,7 @@ def seed_db():
                         can_buy=user.get("can_buy"),
                         can_sell=user.get("can_sell"),
                         is_committee=user.get("is_committee"),
-                        user_id=user.get("user_id"),
+                        provider_user_id=user.get("provider_user_id"),
                     )
                 )
         brandon_gmail_id = (
