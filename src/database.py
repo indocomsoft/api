@@ -78,7 +78,7 @@ class User(Base):
 
     @property
     def additional_things_to_dict(self):
-        d = {}
+        d = {"auth_token": None}
 
         with session_scope() as session:
             req = session.query(UserRequest).filter_by(user_id=str(self.id))
