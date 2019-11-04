@@ -6,7 +6,13 @@ from src.config import APP_CONFIG
 from src.database import BuyOrder, session_scope
 from src.exceptions import ResourceNotOwnedException, UnauthorizedException
 from src.services import BuyOrderService
-from tests.fixtures import create_buy_order, create_round, create_security, create_user
+from tests.fixtures import (
+    create_buy_order,
+    create_round,
+    create_security,
+    create_user,
+    create_user_request,
+)
 from tests.utils import assert_dict_in
 
 buy_order_service = BuyOrderService(config=APP_CONFIG)
@@ -55,6 +61,34 @@ def test_create_order__authorized():
     user = create_user()
     user_id = user["id"]
     security_id = create_security()["id"]
+    round = create_round()
+
+    buy_order_params = {
+        "user_id": user_id,
+        "number_of_shares": 20,
+        "price": 30,
+        "security_id": security_id,
+    }
+
+    with patch("src.services.RoundService.get_active", return_value=round), patch(
+        "src.services.RoundService.should_round_start", return_value=False
+    ), patch("src.services.EmailService.send_email") as email_mock:
+        buy_order_id = buy_order_service.create_order(**buy_order_params)["id"]
+        email_mock.assert_called_with(
+            emails=[user["email"]], template="create_buy_order"
+        )
+
+    with session_scope() as session:
+        buy_order = session.query(BuyOrder).get(buy_order_id).asdict()
+
+    assert_dict_in({**buy_order_params, "round_id": round["id"]}, buy_order)
+
+
+def test_create_order__pending():
+    user = create_user(can_buy=False)
+    user_id = user["id"]
+    security_id = create_security()["id"]
+    create_user_request(user_id=user_id, is_buy=True)
     round = create_round()
 
     buy_order_params = {

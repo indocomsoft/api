@@ -1,10 +1,7 @@
 from unittest.mock import patch
 
-import pytest
-
 from src.config import APP_CONFIG
 from src.database import User, UserRequest, session_scope
-from src.exceptions import ResourceNotFoundException
 from src.services import UserService
 from tests.fixtures import create_user
 from tests.utils import assert_dict_in
@@ -16,9 +13,10 @@ def test_create__is_buy():
     user_params = {
         "email": "a@a.io",
         "full_name": "Ben",
-        "user_id": "testing",
+        "provider_user_id": "testing",
         "display_image_url": "http://blah",
         "is_buy": True,
+        "auth_token": None,
     }
 
     committee_email = create_user(is_committee=True)["email"]
@@ -44,9 +42,10 @@ def test_create__is_sell():
     user_params = {
         "email": "a@a.io",
         "full_name": "Ben",
-        "user_id": "testing",
+        "provider_user_id": "testing",
         "display_image_url": "http://blah",
         "is_buy": False,
+        "auth_token": None,
     }
 
     committee_email = create_user(is_committee=True)["email"]
@@ -72,9 +71,10 @@ def test_create__user_exists():
     user_params = {
         "email": "a@a.io",
         "full_name": "Ben",
-        "user_id": "testing",
+        "provider_user_id": "testing",
         "display_image_url": "http://blah",
         "is_buy": True,
+        "auth_token": None,
     }
     with patch("src.services.EmailService.send_email"):
         user_service.create_if_not_exists(
@@ -100,20 +100,7 @@ def test_create__user_exists():
 
 
 def test_get_user_by_linkedin_id():
-    user_params = create_user(user_id="abcdef")
+    user_params = create_user(provider_user_id="abcdef")
 
-    user = user_service.get_user_by_linkedin_id(user_id="abcdef")
+    user = user_service.get_user_by_linkedin_id(provider_user_id="abcdef")
     assert user_params == user
-
-
-def test_get_user():
-    user_params = create_user()
-
-    user_id = user_service.get_user_by_linkedin_id(user_id="abcdef")["id"]
-
-    user = user_service.get_user(id=user_id)
-
-    assert user_params == user
-
-    with pytest.raises(ResourceNotFoundException):
-        user_service.get_user(id="00000000-0000-0000-0000-000000000000")

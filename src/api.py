@@ -19,7 +19,7 @@ def auth_required(f):
         token = header[len(PREFIX) :]
         linkedin_user = request.app.linkedin_login.get_linkedin_user(token=token)
         user = request.app.user_service.get_user_by_linkedin_id(
-            user_id=linkedin_user.get("user_id")
+            provider_user_id=linkedin_user.get("user_id")
         )
         if user is None:
             raise ResourceNotOwnedException("User not found")
@@ -33,7 +33,9 @@ def auth_required(f):
 @blueprint.get("/auth/me")
 @auth_required
 async def user_info(request, user):
-    user = request.app.user_service.get_user_by_linkedin_id(user_id=user.get("user_id"))
+    user = request.app.user_service.get_user_by_linkedin_id(
+        provider_user_id=user.get("user_id")
+    )
     return json({"me": user})
 
 
@@ -178,25 +180,15 @@ async def linkedin_auth_callback(request):
     return json(request.app.linkedin_login.authenticate(**request.json))
 
 
-@blueprint.get("/requests/buy/")
+@blueprint.get("/requests/")
 @auth_required
-async def get_buy_requests(request, user):
-    return json(
-        request.app.user_request_service.get_buy_requests(subject_id=user["id"])
-    )
-
-
-@blueprint.get("/requests/sell/")
-@auth_required
-async def get_sell_requests(request, user):
-    return json(
-        request.app.user_request_service.get_sell_requests(subject_id=user["id"])
-    )
+async def get_requests(request, user):
+    return json(request.app.user_request_service.get_requests(subject_id=user["id"]))
 
 
 @blueprint.post("/requests/<id>")
 @auth_required
-async def approve_request(request, id, user):
+async def approve_request(request, user, id):
     return json(
         request.app.user_request_service.approve_request(
             request_id=id, subject_id=user["id"]
@@ -206,7 +198,7 @@ async def approve_request(request, id, user):
 
 @blueprint.delete("/requests/<id>")
 @auth_required
-async def reject_request(request, id, user):
+async def reject_request(request, user, id):
     return json(
         request.app.user_request_service.reject_request(
             request_id=id, subject_id=user["id"]

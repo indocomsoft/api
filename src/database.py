@@ -64,7 +64,8 @@ class User(Base):
     can_buy = Column(Boolean, nullable=False, server_default="f")
     can_sell = Column(Boolean, nullable=False, server_default="f")
     is_committee = Column(Boolean, nullable=False, server_default="f")
-    user_id = Column(String, nullable=False, unique=True)
+    provider_user_id = Column(String, nullable=False, unique=True)
+    auth_token = Column(String)
 
     sell_orders = relationship("SellOrder", back_populates="user")
     buy_orders = relationship("BuyOrder", back_populates="user")
@@ -218,6 +219,7 @@ class UserRequest(Base):
 
     user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
     is_buy = Column(Boolean, nullable=False)
+    closed_by_user_id = Column(UUID, ForeignKey("users.id"))
 
 
 engine = create_engine(APP_CONFIG["DATABASE_URL"])

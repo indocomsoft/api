@@ -2,8 +2,6 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 import requests
-from sqlalchemy import and_, or_
-from sqlalchemy.orm import aliased
 from sqlalchemy.sql import func
 
 from src.database import (
@@ -49,10 +47,14 @@ class UserService:
         self.email_service = EmailService(config)
 
     def create_if_not_exists(
-        self, email, display_image_url, full_name, user_id, is_buy
+        self, email, display_image_url, full_name, provider_user_id, is_buy, auth_token
     ):
         with session_scope() as session:
-            user = session.query(User).filter_by(user_id=user_id).one_or_none()
+            user = (
+                session.query(User)
+                .filter_by(provider_user_id=provider_user_id)
+                .one_or_none()
+            )
             if user is None:
                 user = User(
                     email=email,
@@ -61,7 +63,8 @@ class UserService:
                     provider="linkedin",
                     can_buy=False,
                     can_sell=False,
-                    user_id=user_id,
+                    provider_user_id=provider_user_id,
+                    auth_token=auth_token,
                 )
                 session.add(user)
                 session.flush()
@@ -83,22 +86,18 @@ class UserService:
                 user.email = email
                 user.full_name = full_name
                 user.display_image_url = display_image_url
+                user.auth_token = auth_token
 
             session.commit()
             return user.asdict()
 
-    @validate_input({"id": UUID_RULE})
-    def get_user(self, id):
+    def get_user_by_linkedin_id(self, provider_user_id):
         with session_scope() as session:
-            user = session.query(User).get(id)
-            if user is None:
-                raise ResourceNotFoundException()
-            user_dict = user.asdict()
-        return user_dict
-
-    def get_user_by_linkedin_id(self, user_id):
-        with session_scope() as session:
-            user = session.query(User).filter_by(user_id=user_id).one_or_none()
+            user = (
+                session.query(User)
+                .filter_by(provider_user_id=provider_user_id)
+                .one_or_none()
+            )
             if user is None:
                 raise ResourceNotFoundException()
             user_dict = user.asdict()
@@ -116,7 +115,7 @@ class SellOrderService:
             user = session.query(User).get(user_id)
             if user is None:
                 raise ResourceNotFoundException()
-            if not user.can_sell:
+            if user.asdict()["can_sell"] == "NO":
                 raise UnauthorizedException("User cannot place sell orders.")
 
             sell_order_count = (
@@ -213,7 +212,7 @@ class BuyOrderService:
             user = session.query(User).get(user_id)
             if user is None:
                 raise ResourceNotFoundException()
-            if not user.can_buy:
+            if user.asdict()["can_buy"] == "NO":
                 raise UnauthorizedException("User cannot place buy orders.")
 
             buy_order_count = session.query(BuyOrder).filter_by(user_id=user_id).count()
@@ -837,7 +836,6 @@ class ChatRoomService:
                     )
                 )
         return sorted(data, key=lambda item: item["updated_at"], reverse=True)
-
     def get_other_party_details(self, chat_room_id, user_id):
         with session_scope() as session:
             chat_room = session.query(ChatRoom).get(chat_room_id).asdict()
@@ -878,7 +876,7 @@ class LinkedInLogin:
         client_id = self.config.get("CLIENT_ID")
         response_type = "code"
 
-        scope = "r_liteprofile%20r_emailaddress%20w_member_social%20r_basicprofile"
+        scope = "r_liteprofile%20r_emailaddress"
         # TODO add state
         url = f"https://www.linkedin.com/oauth/v2/authorization?response_type={response_type}&client_id={client_id}&redirect_uri={redirect_uri[0]}&scope={scope}"
 
@@ -889,10 +887,21 @@ class LinkedInLogin:
         is_buy = user_type == "buyer"
         token = self._get_token(code=code, redirect_uri=redirect_uri)
         user = self.get_linkedin_user(token["access_token"])
-        UserService(self.config).create_if_not_exists(**user, is_buy=is_buy)
+        UserService(self.config).create_if_not_exists(
+            **user, is_buy=is_buy, auth_token=token["access_token"]
+        )
         return token
 
     def get_linkedin_user(self, token):
+        with session_scope() as session:
+            users = [
+                u.asdict()
+                for u in session.query(User).filter_by(auth_token=token).all()
+            ]
+
+            if len(users) == 1:
+                return users[0]
+
         user_profile = self._get_user_profile(token=token)
         email = self._get_user_email(token=token)
         return {**user_profile, "email": email}
@@ -911,7 +920,7 @@ class LinkedInLogin:
         )
         json_res = res.json()
         if json_res.get("access_token") is None:
-            print(res)
+            print(res, json_res)
             raise UserProfileNotFoundException("Token retrieval failed.")
         return json_res
 
@@ -924,7 +933,7 @@ class LinkedInLogin:
         if user_profile_request.status_code == 401:
             raise UserProfileNotFoundException("User profile not found.")
         user_profile_data = user_profile_request.json()
-        user_id = user_profile_data.get("id")
+        provider_user_id = user_profile_data.get("id")
         first_name = user_profile_data.get("firstName").get("localized").get("en_US")
         last_name = user_profile_data.get("lastName").get("localized").get("en_US")
         try:
@@ -941,7 +950,7 @@ class LinkedInLogin:
         return {
             "full_name": f"{first_name} {last_name}",
             "display_image_url": display_image_url,
-            "user_id": user_id,
+            "provider_user_id": provider_user_id,
         }
 
     @staticmethod
@@ -962,22 +971,51 @@ class UserRequestService:
         self.email_service = EmailService(config)
 
     @validate_input({"subject_id": UUID_RULE})
-    def get_buy_requests(self, subject_id):
+    def get_requests(self, subject_id):
         with session_scope() as session:
             if not session.query(User).get(subject_id).is_committee:
                 raise InvisibleUnauthorizedException("Not committee")
 
-            buy_requests = session.query(UserRequest).filter_by(is_buy=True).all()
-            return [buy_request.asdict() for buy_request in buy_requests]
-
-    @validate_input({"subject_id": UUID_RULE})
-    def get_sell_requests(self, subject_id):
-        with session_scope() as session:
-            if not session.query(User).get(subject_id).is_committee:
-                raise InvisibleUnauthorizedException("Not committee")
-
-            sell_requests = session.query(BuyOrder).filter_by(is_buy=False).all()
-            return [sell_request.asdict() for sell_request in sell_requests]
+            buy_requests = (
+                session.query(UserRequest, User)
+                .join(User, User.id == UserRequest.user_id)
+                .filter(
+                    UserRequest.is_buy == True, UserRequest.closed_by_user_id == None
+                )
+                .all()
+            )
+            sell_requests = (
+                session.query(UserRequest, User)
+                .join(User, User.id == UserRequest.user_id)
+                .filter(
+                    UserRequest.is_buy == False, UserRequest.closed_by_user_id == None
+                )
+                .all()
+            )
+            return {
+                "buyers": [
+                    {
+                        **r[0].asdict(),
+                        **{
+                            k: v
+                            for k, v in r[1].asdict().items()
+                            if k not in ["id", "created_at", "updated_at"]
+                        },
+                    }
+                    for r in buy_requests
+                ],
+                "sellers": [
+                    {
+                        **r[0].asdict(),
+                        **{
+                            k: v
+                            for k, v in r[1].asdict().items()
+                            if k not in ["id", "created_at", "updated_at"]
+                        },
+                    }
+                    for r in sell_requests
+                ],
+            }
 
     @validate_input({"request_id": UUID_RULE, "subject_id": UUID_RULE})
     def approve_request(self, request_id, subject_id):
@@ -986,20 +1024,19 @@ class UserRequestService:
                 raise InvisibleUnauthorizedException("Not committee")
 
             request = session.query(UserRequest).get(request_id)
-            user = session.query(User).get(request.user_id)
+            request.closed_by_user_id = subject_id
 
+            user = session.query(User).get(request.user_id)
             if request.is_buy:
                 user.can_buy = True
                 self.email_service.send_email(
                     emails=[user.email], template="approved_buyer"
                 )
             else:
-                user.can_sell = False
+                user.can_sell = True
                 self.email_service.send_email(
                     emails=[user.email], template="approved_seller"
                 )
-
-            request.delete()
 
     @validate_input({"request_id": UUID_RULE, "subject_id": UUID_RULE})
     def reject_request(self, request_id, subject_id):
@@ -1008,10 +1045,8 @@ class UserRequestService:
                 raise InvisibleUnauthorizedException("Not committee")
 
             request = session.query(UserRequest).get(request_id)
+            request.closed_by_user_id = subject_id
+
             user = session.query(User).get(request.user_id)
-
             email_template = "rejected_buyer" if request.is_buy else "rejected_seller"
-
-            request.delete()
-
             self.email_service.send_email(emails=[user.email], template=email_template)
