@@ -1,10 +1,7 @@
 from unittest.mock import patch
 
-import pytest
-
 from src.config import APP_CONFIG
 from src.database import User, UserRequest, session_scope
-from src.exceptions import ResourceNotFoundException
 from src.services import UserService
 from tests.fixtures import create_user
 from tests.utils import assert_dict_in
@@ -107,16 +104,3 @@ def test_get_user_by_linkedin_id():
 
     user = user_service.get_user_by_linkedin_id(provider_user_id="abcdef")
     assert user_params == user
-
-
-def test_get_user():
-    user_params = create_user()
-
-    user_id = user_service.get_user_by_linkedin_id(provider_user_id="abcdef")["id"]
-
-    user = user_service.get_user(id=user_id)
-
-    assert user_params == user
-
-    with pytest.raises(ResourceNotFoundException):
-        user_service.get_user(id="00000000-0000-0000-0000-000000000000")

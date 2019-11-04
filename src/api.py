@@ -19,7 +19,7 @@ def auth_required(f):
         token = header[len(PREFIX) :]
         linkedin_user = request.app.linkedin_login.get_linkedin_user(token=token)
         user = request.app.user_service.get_user_by_linkedin_id(
-            user_id=linkedin_user.get("user_id")
+            provider_user_id=linkedin_user.get("user_id")
         )
         if user is None:
             raise ResourceNotOwnedException("User not found")
@@ -33,7 +33,9 @@ def auth_required(f):
 @blueprint.get("/auth/me")
 @auth_required
 async def user_info(request, user):
-    user = request.app.user_service.get_user_by_linkedin_id(user_id=user.get("user_id"))
+    user = request.app.user_service.get_user_by_linkedin_id(
+        provider_user_id=user.get("user_id")
+    )
     return json({"me": user})
 
 

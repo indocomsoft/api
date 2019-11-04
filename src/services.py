@@ -91,15 +91,6 @@ class UserService:
             session.commit()
             return user.asdict()
 
-    @validate_input({"id": UUID_RULE})
-    def get_user(self, id):
-        with session_scope() as session:
-            user = session.query(User).get(id)
-            if user is None:
-                raise ResourceNotFoundException()
-            user_dict = user.asdict()
-        return user_dict
-
     def get_user_by_linkedin_id(self, provider_user_id):
         with session_scope() as session:
             user = (
