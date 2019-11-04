@@ -22,7 +22,11 @@ def test_get_requests():
     assert [
         {
             **buyer_request,
-            **{k: v for k, v in buyer.items() if k not in ["created_at", "updated_at"]},
+            **{
+                k: v
+                for k, v in buyer.items()
+                if k not in ["id", "created_at", "updated_at"]
+            },
             "can_buy": "UNAPPROVED",
         }
     ] == reqs["buyers"]
@@ -30,7 +34,9 @@ def test_get_requests():
         {
             **seller_request,
             **{
-                k: v for k, v in seller.items() if k not in ["created_at", "updated_at"]
+                k: v
+                for k, v in seller.items()
+                if k not in ["id", "created_at", "updated_at"]
             },
             "can_sell": "UNAPPROVED",
         }

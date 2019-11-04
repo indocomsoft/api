@@ -953,7 +953,7 @@ class UserRequestService:
                         **{
                             k: v
                             for k, v in r[1].asdict().items()
-                            if k not in ["created_at", "updated_at"]
+                            if k not in ["id", "created_at", "updated_at"]
                         },
                     }
                     for r in buy_requests
@@ -964,7 +964,7 @@ class UserRequestService:
                         **{
                             k: v
                             for k, v in r[1].asdict().items()
-                            if k not in ["created_at", "updated_at"]
+                            if k not in ["id", "created_at", "updated_at"]
                         },
                     }
                     for r in sell_requests
