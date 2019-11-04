@@ -14,11 +14,9 @@ def test_get_auth_url():
 
 
 def test_authenticate():
-    with patch("src.services.requests.post") as mock_post, patch(
-        "src.services.requests.get"
-    ) as mock_get, patch(
+    with patch("src.services.requests.post"), patch("src.services.requests.get"), patch(
         "src.services.UserService.create_if_not_exists"
-    ) as mock_create:
+    ):
         linkedin_login.authenticate(
             code="some_code", redirect_uri="some_redirect_uri", user_type="buyer"
         )

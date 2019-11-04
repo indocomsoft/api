@@ -2,8 +2,6 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 import requests
-from sqlalchemy import and_, or_
-from sqlalchemy.orm import aliased
 from sqlalchemy.sql import func
 
 from src.database import (

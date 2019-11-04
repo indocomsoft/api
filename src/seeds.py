@@ -1,11 +1,8 @@
-import uuid
 from datetime import datetime
 
 from src.database import (
     BuyOrder,
-    Chat,
     ChatRoom,
-    Match,
     Round,
     Security,
     SellOrder,
@@ -122,12 +119,6 @@ def seed_db():
                     round_id=str(current_round_id),
                 )
             )
-        brandon_yahoo_buy_order = (
-            session.query(BuyOrder).filter_by(user_id=str(brandon_yahoo_id)).first().id
-        )
-        brandon_gmail_buy_order = (
-            session.query(BuyOrder).filter_by(user_id=str(brandon_gmail_id)).first().id
-        )
 
         # create sell orders
         if (
@@ -156,12 +147,6 @@ def seed_db():
                     round_id=str(current_round_id),
                 )
             )
-        brandon_yahoo_sell_order = (
-            session.query(SellOrder).filter_by(user_id=str(brandon_yahoo_id)).first().id
-        )
-        brandon_gmail_sell_order = (
-            session.query(SellOrder).filter_by(user_id=str(brandon_gmail_id)).first().id
-        )
 
 
 if __name__ == "__main__":
